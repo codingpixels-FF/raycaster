@@ -1,0 +1,27 @@
+# Binaries for Go
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+# Output of `go build`
+/bin/
+/build/
+
+# Vendor directory (if used, but usually committed)
+/vendor/
+
+# GoLand project files
+.idea/
+
+# Sensitive files (if any)
+.env
+
+# Cache and build artifacts
+*.cache
+
+# IDE-specific files
+*.iml
+*.ipr
+*.iws

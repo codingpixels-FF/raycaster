@@ -55,8 +55,14 @@ func castRay(px float64, py float64, rayAngleDegrees float64, maxDepth float64) 
 	return maxDepth, 0, 0
 }
 
+const (
+	screenWidth      = 1980
+	screenHeight     = 1080
+	screenHeightHalf = screenHeight / 2
+)
+
 func main() {
-	raylib.InitWindow(1980, 1080, "Raycasting in Go")
+	raylib.InitWindow(screenWidth, screenHeight, "Raycasting in Go")
 	defer raylib.CloseWindow()
 
 	loadMap("map.txt")
@@ -67,7 +73,7 @@ func main() {
 
 	// Camera settings
 	fov := 90.0
-	numRays := 396
+	numRays := screenWidth
 	maxDepth := 20.0
 
 	raylib.SetTargetFPS(60)
@@ -93,9 +99,9 @@ func main() {
 		for ray := 0; ray < numRays; ray++ {
 			rayAngleDegrees := (float64(ray)/float64(numRays)-0.5)*(fov*math.Pi/180) + dir
 			dist, _, _ := castRay(posX, posY, rayAngleDegrees, maxDepth)
-			wallHeight := float32(1080 / (dist + 0.0001))
-			lineX := float32(ray) * (1980.0 / float32(numRays))
-			raylib.DrawLine(int32(lineX), 540-int32(wallHeight/2), int32(lineX), 540+int32(wallHeight/2), raylib.Black)
+			wallHeight := float32(screenHeight / (dist + 0.0001))
+			lineX := float32(ray) * (screenWidth / float32(numRays))
+			raylib.DrawLine(int32(lineX), screenHeightHalf-int32(wallHeight/2), int32(lineX), screenHeightHalf+int32(wallHeight/2), raylib.Black)
 		}
 
 		raylib.EndDrawing()

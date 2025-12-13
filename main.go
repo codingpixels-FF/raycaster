@@ -37,7 +37,7 @@ func loadMap(filename string) {
 
 // castRay function returns distance to the wall
 func castRay(px float64, py float64, rayAngleDegrees float64, maxDepth float64) (float64, float64, float64) {
-	for depth := 0.0; depth < maxDepth; depth += 0.1 {
+	for depth := 0.0; depth < maxDepth; depth += 0.01 {
 		positionX := px + depth*math.Cos(rayAngleDegrees)
 		positionY := py + depth*math.Sin(rayAngleDegrees)
 		mapX := int(positionX)

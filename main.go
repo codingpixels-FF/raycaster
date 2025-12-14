@@ -36,23 +36,31 @@ func loadMap(filename string) {
 }
 
 // castRay function returns distance to the wall
-func castRay(px float64, py float64, rayAngleDegrees float64, maxDepth float64) (float64, float64, float64) {
-	for depth := 0.0; depth < maxDepth; depth += 0.01 {
-		positionX := px + depth*math.Cos(rayAngleDegrees)
-		positionY := py + depth*math.Sin(rayAngleDegrees)
-		mapX := int(positionX)
-		mapY := int(positionY)
-		// Is ray inside the map?
-		if mapX >= 0 && mapX < mapWidth && mapY >= 0 && mapY < mapHeight {
-			// Was a wall hit?
-			if mapData[mapY][mapX] == 1 {
-				return depth, positionX, positionY
-			}
-		} else {
-			return maxDepth, positionX, positionY
+func castRay(rayX float64, rayY float64, rayAngleDegrees float64) (float64, float64, float64, bool) {
+
+	depth := 0.01
+	deltaX := depth * math.Cos(rayAngleDegrees)
+	deltaY := depth * math.Sin(rayAngleDegrees)
+	mapX := int(rayX)
+	mapY := int(rayY)
+	totalDepth := depth
+	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
+		totalDepth += depth
+		rayX += deltaX
+		mapX = int(rayX)
+		// Check for collision on X
+		if mapData[mapY][mapX] == 1 {
+			return totalDepth, rayX, rayY, true
+		}
+		rayY += deltaY
+		// check for collision on both (and assume it was Y)
+		mapY = int(rayY)
+		if mapData[mapY][mapX] == 1 {
+			return totalDepth, rayX, rayY, false
 		}
 	}
-	return maxDepth, 0, 0
+
+	return 5, 0, 0, false
 }
 
 const (
@@ -65,6 +73,11 @@ func main() {
 	raylib.InitWindow(screenWidth, screenHeight, "Raycasting in Go")
 	defer raylib.CloseWindow()
 
+	wallTexture := raylib.LoadTexture("wall5.png") // or "wall.jpg"
+	defer raylib.UnloadTexture(wallTexture)
+	wallTextureDark := raylib.LoadTexture("wall5_dark.png") // or "wall.jpg"
+	defer raylib.UnloadTexture(wallTexture)
+
 	loadMap("map.txt")
 
 	// Player
@@ -73,8 +86,7 @@ func main() {
 
 	// Camera settings
 	fov := 90.0
-	numRays := screenWidth
-	maxDepth := 20.0
+	numRays := screenWidth / 2
 
 	raylib.SetTargetFPS(60)
 
@@ -94,14 +106,49 @@ func main() {
 		}
 
 		raylib.BeginDrawing()
-		raylib.ClearBackground(raylib.RayWhite)
+		raylib.ClearBackground(raylib.DarkGray)
 
 		for ray := 0; ray < numRays; ray++ {
 			rayAngleDegrees := (float64(ray)/float64(numRays)-0.5)*(fov*math.Pi/180) + dir
-			dist, _, _ := castRay(posX, posY, rayAngleDegrees, maxDepth)
+			dist, hitX, hitY, isHitOnX := castRay(posX, posY, rayAngleDegrees)
 			wallHeight := float32(screenHeight / (dist + 0.0001))
-			lineX := float32(ray) * (screenWidth / float32(numRays))
-			raylib.DrawLine(int32(lineX), screenHeightHalf-int32(wallHeight/2), int32(lineX), screenHeightHalf+int32(wallHeight/2), raylib.Black)
+
+			// Texture coordinate
+			var texX float32
+			if isHitOnX {
+				texX = float32(hitY - math.Floor(hitY))
+			} else {
+				texX = float32(hitX - math.Floor(hitX))
+			}
+
+			texX = texX * float32(wallTexture.Width) // map to texture width
+
+			// Calculate the rectangle to draw
+			sliceWidth := float32(wallTexture.Width) / float32(numRays)
+
+			// Source rectangle from texture
+			srcRect := raylib.Rectangle{
+				X:      texX,
+				Y:      0,
+				Width:  sliceWidth,
+				Height: float32(wallTexture.Height),
+			}
+
+			// Destination rectangle
+			destRect := raylib.Rectangle{
+				X:      float32(ray) * (screenWidth / float32(numRays)),
+				Y:      screenHeightHalf - wallHeight/2,
+				Width:  float32(screenWidth / numRays),
+				Height: wallHeight,
+			}
+
+			// Draw textured slice
+			if isHitOnX {
+				raylib.DrawTexturePro(wallTexture, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+			} else {
+				raylib.DrawTexturePro(wallTextureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+			}
+
 		}
 
 		raylib.EndDrawing()

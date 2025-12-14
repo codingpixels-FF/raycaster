@@ -112,6 +112,11 @@ func main() {
 		for ray := 0; ray < numRays; ray++ {
 			rayAngleDegrees := (float64(ray)/float64(numRays)-0.5)*(fov*math.Pi/180) + dir
 			dist, hitX, hitY, isHitOnX := castRay(posX, posY, rayAngleDegrees)
+
+			// Calculate the angle difference
+			angleDiff := rayAngleDegrees - dir
+			// Perspective correction
+			dist = dist * math.Cos(angleDiff)
 			wallHeight := float32(screenHeight / (dist + 0.0001))
 
 			// Texture coordinate

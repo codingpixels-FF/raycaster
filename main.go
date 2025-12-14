@@ -106,7 +106,8 @@ func main() {
 		}
 
 		raylib.BeginDrawing()
-		raylib.ClearBackground(raylib.DarkGray)
+		raylib.ClearBackground(raylib.NewColor(50, 50, 50, 255))
+		raylib.DrawRectangle(0, screenHeightHalf, screenWidth, screenHeight, raylib.NewColor(135, 135, 135, 255))
 
 		for ray := 0; ray < numRays; ray++ {
 			rayAngleDegrees := (float64(ray)/float64(numRays)-0.5)*(fov*math.Pi/180) + dir

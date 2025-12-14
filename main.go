@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"math"
 	"os"
 	_ "strconv"
@@ -67,10 +68,17 @@ const (
 	screenWidth      = 1980
 	screenHeight     = 1080
 	screenHeightHalf = screenHeight / 2
+	statusBarHeight  = screenHeight / 5
 )
 
+// Player properties
+type Player struct {
+	x, y  float64
+	angle float64 // direction angle
+}
+
 func main() {
-	raylib.InitWindow(screenWidth, screenHeight, "Raycasting in Go")
+	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Raycasting in Go")
 	defer raylib.CloseWindow()
 
 	wallTexture := raylib.LoadTexture("wall5.png") // or "wall.jpg"
@@ -81,11 +89,14 @@ func main() {
 	loadMap("map.txt")
 
 	// Player
-	posX, posY := 3.0, 3.0
-	dir := 0.0 // looking straight ahead
+	player := Player{
+		x:     3.0,
+		y:     3.0,
+		angle: 0, // looking straight ahead
+	}
 
 	// Camera settings
-	fov := 90.0
+	fov := math.Pi / 2.0 // 90 degrees
 	numRays := screenWidth / 2
 
 	raylib.SetTargetFPS(60)
@@ -93,16 +104,16 @@ func main() {
 	for !raylib.WindowShouldClose() {
 		// Mouse
 		deltaX := float64(raylib.GetMouseDelta().X)
-		dir += deltaX * 0.01
+		player.angle += deltaX * 0.01
 
 		// Keyboard
 		if raylib.IsKeyDown(raylib.KeyW) {
-			posX += 0.1 * math.Cos(dir)
-			posY += 0.1 * math.Sin(dir)
+			player.x += 0.1 * math.Cos(player.angle)
+			player.y += 0.1 * math.Sin(player.angle)
 		}
 		if raylib.IsKeyDown(raylib.KeyS) {
-			posX -= 0.1 * math.Cos(dir)
-			posY -= 0.1 * math.Sin(dir)
+			player.x -= 0.1 * math.Cos(player.angle)
+			player.y -= 0.1 * math.Sin(player.angle)
 		}
 
 		raylib.BeginDrawing()
@@ -110,11 +121,11 @@ func main() {
 		raylib.DrawRectangle(0, screenHeightHalf, screenWidth, screenHeight, raylib.NewColor(135, 135, 135, 255))
 
 		for ray := 0; ray < numRays; ray++ {
-			rayAngleDegrees := (float64(ray)/float64(numRays)-0.5)*(fov*math.Pi/180) + dir
-			dist, hitX, hitY, isHitOnX := castRay(posX, posY, rayAngleDegrees)
+			rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle // ray angles in Rad
+			dist, hitX, hitY, isHitOnX := castRay(player.x, player.y, rayAngleRad)
 
 			// Calculate the angle difference
-			angleDiff := rayAngleDegrees - dir
+			angleDiff := rayAngleRad - player.angle
 			// Perspective correction
 			dist = dist * math.Cos(angleDiff)
 			wallHeight := float32(screenHeight / (dist + 0.0001))
@@ -154,8 +165,15 @@ func main() {
 			} else {
 				raylib.DrawTexturePro(wallTextureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 			}
-
 		}
+		// status bar overlay
+		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))
+		raylib.DrawRectangle(0, screenHeight+10, screenWidth, screenHeight+statusBarHeight, raylib.NewColor(0, 0, 255, 255))
+		playerStatus := fmt.Sprintf("%.2f\n%.2f\n%.2f", player.x, player.y, player.angle)
+		raylib.DrawText(playerStatus, 20, screenHeight+10, 65, raylib.White)
+
+		playerStatusLegend := fmt.Sprintf("x\ny\n>")
+		raylib.DrawText(playerStatusLegend, 200, screenHeight+10, 65, raylib.White)
 
 		raylib.EndDrawing()
 	}

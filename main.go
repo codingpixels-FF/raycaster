@@ -84,7 +84,9 @@ func main() {
 	wallTexture := raylib.LoadTexture("wall5.png") // or "wall.jpg"
 	defer raylib.UnloadTexture(wallTexture)
 	wallTextureDark := raylib.LoadTexture("wall5_dark.png") // or "wall.jpg"
-	defer raylib.UnloadTexture(wallTexture)
+	defer raylib.UnloadTexture(wallTextureDark)
+	bushTexture := raylib.LoadTexture("bush1.png") // or "wall.jpg"
+	defer raylib.UnloadTexture(bushTexture)
 
 	loadMap("map.txt")
 
@@ -165,6 +167,23 @@ func main() {
 			} else {
 				raylib.DrawTexturePro(wallTextureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 			}
+
+			// Source rectangle from texture
+			srcRect = raylib.Rectangle{
+				X:      texX,
+				Y:      0,
+				Width:  sliceWidth,
+				Height: float32(wallTexture.Height),
+			}
+
+			// Destination rectangle
+			destRect = raylib.Rectangle{
+				X:      float32(ray) * (screenWidth / float32(numRays)),
+				Y:      screenHeightHalf - wallHeight,
+				Width:  float32(screenWidth / numRays),
+				Height: wallHeight * 2.3,
+			}
+			raylib.DrawTexturePro(bushTexture, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 		}
 		// status bar overlay
 		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))

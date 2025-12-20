@@ -52,19 +52,19 @@ func getRadius(x, y, cx, cy float64) float64 {
 }
 
 // castRay function returns distance to the wall
-func castRay(rayX float64, rayY float64, rayAngleDegrees float64) []ZBufferItem {
+func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem {
 
 	var zbufferSlice []ZBufferItem
 
 	depth := 0.01
-	deltaX := depth * math.Cos(rayAngleDegrees)
-	deltaY := depth * math.Sin(rayAngleDegrees)
+	deltaX := depth * math.Cos(rayAngleRadians)
+	deltaY := depth * math.Sin(rayAngleRadians)
 	mapX := int(rayX)
 	mapY := int(rayY)
 	totalDepth := depth
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
-		if totalDepth > 55 {
+		if totalDepth > 95 {
 			return zbufferSlice
 		}
 		rayX += deltaX
@@ -80,9 +80,7 @@ func castRay(rayX float64, rayY float64, rayAngleDegrees float64) []ZBufferItem 
 		// check of mirrors on X
 		if mapData[mapY][mapX] == 2 {
 			rayY += deltaY // correct the ray
-			rayAngleDegrees = -rayAngleDegrees
-			deltaX = depth * math.Cos(rayAngleDegrees)
-			deltaY = depth * math.Sin(rayAngleDegrees)
+			deltaX = -deltaX
 			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, true, 2}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			rayX += deltaX
@@ -101,9 +99,7 @@ func castRay(rayX float64, rayY float64, rayAngleDegrees float64) []ZBufferItem 
 
 		// check of mirrors on Y
 		if mapData[mapY][mapX] == 2 { //up down
-			rayAngleDegrees = -rayAngleDegrees
-			deltaX = depth * math.Cos(rayAngleDegrees)
-			deltaY = depth * math.Sin(rayAngleDegrees)
+			deltaY = -deltaY
 			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 2}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			rayX += deltaX
@@ -144,7 +140,7 @@ func castRay(rayX float64, rayY float64, rayAngleDegrees float64) []ZBufferItem 
 				//transform it for X
 				lenFromObject := getRadius(float64(mapX)+0.5, float64(mapY)+0.5, lenFromObjectX, lenFromObjectY) //math.Sqrt((float64(mapX)+0.5)*lenFromObjectX + (float64(mapY)+0.5)*lenFromObjectY)
 
-				// normalize the len from -0.5 to 0.5
+				//TODO compute if it is negative or positive len
 
 				newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 9}
 				zbufferSlice = append(zbufferSlice, newZBufferItem)

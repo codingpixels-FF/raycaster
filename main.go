@@ -15,6 +15,14 @@ var (
 	mapWidth, mapHeight int
 )
 
+type ZBufferItem struct {
+	Dist     float64
+	HitX     float64
+	HitY     float64
+	IsHitOnX bool
+	ItemID   int
+}
+
 func loadMap(filename string) {
 	file, _ := os.Open(filename)
 	defer file.Close()
@@ -24,9 +32,10 @@ func loadMap(filename string) {
 		line := scanner.Text()
 		row := make([]int, len(line))
 		for i, ch := range line {
-			if ch == '1' {
-				row[i] = 1
+			if ch >= '0' && ch <= '9' {
+				row[i] = int(ch - '0')
 			} else {
+				// handle non-digit characters if needed
 				row[i] = 0
 			}
 		}
@@ -36,8 +45,16 @@ func loadMap(filename string) {
 	mapWidth = len(mapData[0])
 }
 
+// get radius of two 2D points
+func getRadius(x, y, cx, cy float64) float64 {
+	distance := math.Hypot(x-cx, y-cy)
+	return distance
+}
+
 // castRay function returns distance to the wall
-func castRay(rayX float64, rayY float64, rayAngleDegrees float64) (float64, float64, float64, bool) {
+func castRay(rayX float64, rayY float64, rayAngleDegrees float64) []ZBufferItem {
+
+	var zbufferSlice []ZBufferItem
 
 	depth := 0.01
 	deltaX := depth * math.Cos(rayAngleDegrees)
@@ -51,17 +68,63 @@ func castRay(rayX float64, rayY float64, rayAngleDegrees float64) (float64, floa
 		mapX = int(rayX)
 		// Check for collision on X
 		if mapData[mapY][mapX] == 1 {
-			return totalDepth, rayX, rayY, true
+			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, true, 1}
+			zbufferSlice = append(zbufferSlice, newZBufferItem)
+			return zbufferSlice
 		}
 		rayY += deltaY
 		// check for collision on both (and assume it was Y)
 		mapY = int(rayY)
 		if mapData[mapY][mapX] == 1 {
-			return totalDepth, rayX, rayY, false
+			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 1}
+			zbufferSlice = append(zbufferSlice, newZBufferItem)
+			return zbufferSlice
+		}
+
+		// check of other objects on the map
+		if mapData[mapY][mapX] == 9 {
+			// only execute if we are in the radius of the root of the squere
+			if getRadius(float64(mapX)+0.5, float64(mapY)+0.5, rayX, rayY) <= 0.5 {
+				// record position and fasttravel to end of this object then compute the middle ground to place the object
+				// we know that the object is in the middle of the circle
+
+				// record start values
+				baseX := rayX
+				baseY := rayY
+				baseTotalDepth := totalDepth
+
+				for getRadius(float64(mapX)+0.5, float64(mapY)+0.5, rayX, rayY) <= 0.5 {
+					totalDepth += depth
+					rayX += deltaX
+					rayY += deltaY
+				}
+				// we are just out of the circle, move one step back
+				totalDepth -= depth
+				rayX -= deltaX
+				rayY -= deltaY
+
+				// record end values
+				finalObjectX := rayX
+				finalObjectY := rayY
+				finalTotalDepth := totalDepth
+
+				lenFromObjectX := (baseX + finalObjectX) / 2
+				lenFromObjectY := (baseY + finalObjectY) / 2
+				lenTotalDepthFromObject := (baseTotalDepth + finalTotalDepth) / 2
+
+				//transform it for X
+				lenFromObject := getRadius(float64(mapX)+0.5, float64(mapY)+0.5, lenFromObjectX, lenFromObjectY) //math.Sqrt((float64(mapX)+0.5)*lenFromObjectX + (float64(mapY)+0.5)*lenFromObjectY)
+
+				// normalize the len from -0.5 to 0.5
+
+				newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 9}
+				zbufferSlice = append(zbufferSlice, newZBufferItem)
+			}
 		}
 	}
-
-	return 5, 0, 0, false
+	newZBufferItem := ZBufferItem{5, 0, 0, false, 1} // default wall
+	zbufferSlice = append(zbufferSlice, newZBufferItem)
+	return zbufferSlice
 }
 
 const (
@@ -109,81 +172,112 @@ func main() {
 		player.angle += deltaX * 0.01
 
 		// Keyboard
+		// Forward
 		if raylib.IsKeyDown(raylib.KeyW) {
 			player.x += 0.1 * math.Cos(player.angle)
 			player.y += 0.1 * math.Sin(player.angle)
 		}
+
+		// Backward
 		if raylib.IsKeyDown(raylib.KeyS) {
 			player.x -= 0.1 * math.Cos(player.angle)
 			player.y -= 0.1 * math.Sin(player.angle)
 		}
 
+		// Strafe left
+		if raylib.IsKeyDown(raylib.KeyA) {
+			player.x += 0.1 * math.Cos(player.angle-math.Pi/2)
+			player.y += 0.1 * math.Sin(player.angle-math.Pi/2)
+		}
+
+		// Strafe right
+		if raylib.IsKeyDown(raylib.KeyD) {
+			player.x += 0.1 * math.Cos(player.angle+math.Pi/2)
+			player.y += 0.1 * math.Sin(player.angle+math.Pi/2)
+		}
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.NewColor(50, 50, 50, 255))
 		raylib.DrawRectangle(0, screenHeightHalf, screenWidth, screenHeight, raylib.NewColor(135, 135, 135, 255))
 
 		for ray := 0; ray < numRays; ray++ {
 			rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle // ray angles in Rad
-			dist, hitX, hitY, isHitOnX := castRay(player.x, player.y, rayAngleRad)
+			//dist, hitX, hitY, isHitOnX := castRay(player.x, player.y, rayAngleRad)
+			zbufferSlice := castRay(player.x, player.y, rayAngleRad)
+			for i := len(zbufferSlice) - 1; i >= 0; i-- {
+				zbufferItem := zbufferSlice[i]
+				itemId := zbufferItem.ItemID
+				itemDist := zbufferItem.Dist
+				hitX := zbufferItem.HitX
+				hitY := zbufferItem.HitY
+				isHitOnX := zbufferItem.IsHitOnX
+				// Calculate the angle difference
+				angleDiff := rayAngleRad - player.angle
 
-			// Calculate the angle difference
-			angleDiff := rayAngleRad - player.angle
-			// Perspective correction
-			dist = dist * math.Cos(angleDiff)
-			wallHeight := float32(screenHeight / (dist + 0.0001))
+				// Perspective correction
+				dist := itemDist * math.Cos(angleDiff)
+				wallHeight := float32(screenHeight / (dist + 0.0001))
 
-			// Texture coordinate
-			var texX float32
-			if isHitOnX {
-				texX = float32(hitY - math.Floor(hitY))
-			} else {
-				texX = float32(hitX - math.Floor(hitX))
+				// Texture coordinate
+				if itemId == 1 {
+					var texX float32
+					if isHitOnX {
+						texX = float32(hitY - math.Floor(hitY))
+					} else {
+						texX = float32(hitX - math.Floor(hitX))
+					}
+					texX = texX * float32(wallTexture.Width) // map to texture width
+
+					// Calculate the rectangle to draw
+					sliceWidth := float32(wallTexture.Width) / float32(numRays)
+
+					// Source rectangle from texture
+					srcRect := raylib.Rectangle{
+						X:      texX,
+						Y:      0,
+						Width:  sliceWidth,
+						Height: float32(wallTexture.Height),
+					}
+
+					// Destination rectangle
+					destRect := raylib.Rectangle{
+						X:      float32(ray) * (screenWidth / float32(numRays)),
+						Y:      screenHeightHalf - wallHeight/2,
+						Width:  float32(screenWidth / numRays),
+						Height: wallHeight,
+					}
+					// Draw textured slice
+					if isHitOnX {
+						raylib.DrawTexturePro(wallTexture, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+					} else {
+						raylib.DrawTexturePro(wallTextureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+					}
+				} else {
+					// hitx is -0.5 to 0.5 of the texture
+
+					texX := 0.5 - float32(hitX)              // map to texture width
+					texX = texX * float32(bushTexture.Width) // map to texture width
+
+					// Calculate the rectangle to draw
+					sliceWidth := float32(bushTexture.Width) / float32(numRays)
+
+					// Source rectangle from texture
+					srcRect := raylib.Rectangle{
+						X:      texX,
+						Y:      0,
+						Width:  sliceWidth,
+						Height: float32(bushTexture.Height),
+					}
+
+					// Destination rectangle
+					destRect := raylib.Rectangle{
+						X:      float32(ray) * (screenWidth / float32(numRays)),
+						Y:      screenHeightHalf - wallHeight/2,
+						Width:  float32(screenWidth / numRays),
+						Height: wallHeight,
+					}
+					raylib.DrawTexturePro(bushTexture, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+				}
 			}
-
-			texX = texX * float32(wallTexture.Width) // map to texture width
-
-			// Calculate the rectangle to draw
-			sliceWidth := float32(wallTexture.Width) / float32(numRays)
-
-			// Source rectangle from texture
-			srcRect := raylib.Rectangle{
-				X:      texX,
-				Y:      0,
-				Width:  sliceWidth,
-				Height: float32(wallTexture.Height),
-			}
-
-			// Destination rectangle
-			destRect := raylib.Rectangle{
-				X:      float32(ray) * (screenWidth / float32(numRays)),
-				Y:      screenHeightHalf - wallHeight/2,
-				Width:  float32(screenWidth / numRays),
-				Height: wallHeight,
-			}
-
-			// Draw textured slice
-			if isHitOnX {
-				raylib.DrawTexturePro(wallTexture, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
-			} else {
-				raylib.DrawTexturePro(wallTextureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
-			}
-
-			// Source rectangle from texture
-			srcRect = raylib.Rectangle{
-				X:      texX,
-				Y:      0,
-				Width:  sliceWidth,
-				Height: float32(wallTexture.Height),
-			}
-
-			// Destination rectangle
-			destRect = raylib.Rectangle{
-				X:      float32(ray) * (screenWidth / float32(numRays)),
-				Y:      screenHeightHalf - wallHeight,
-				Width:  float32(screenWidth / numRays),
-				Height: wallHeight * 2.3,
-			}
-			raylib.DrawTexturePro(bushTexture, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 		}
 		// status bar overlay
 		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))

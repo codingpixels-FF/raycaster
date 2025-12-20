@@ -108,6 +108,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		// check of mirrors on Y
 		if mapData[mapY][mapX] == 2 { //up down
 			deltaY = -deltaY
+			dSinAngle = -dSinAngle // sin 180 is 1/2 period
 			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 2}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			rayX += deltaX

@@ -64,13 +64,31 @@ func castRay(rayX float64, rayY float64, rayAngleDegrees float64) []ZBufferItem 
 	totalDepth := depth
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
+		if totalDepth > 55 {
+			return zbufferSlice
+		}
 		rayX += deltaX
 		mapX = int(rayX)
+		mapY = int(rayY) // needs to be recalculated in case of reflection
+
 		// Check for collision on X
 		if mapData[mapY][mapX] == 1 {
 			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, true, 1}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			return zbufferSlice
+		}
+		// check of mirrors on X
+		if mapData[mapY][mapX] == 2 {
+			rayY += deltaY // correct the ray
+			rayAngleDegrees = -rayAngleDegrees
+			deltaX = depth * math.Cos(rayAngleDegrees)
+			deltaY = depth * math.Sin(rayAngleDegrees)
+			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, true, 2}
+			zbufferSlice = append(zbufferSlice, newZBufferItem)
+			rayX += deltaX
+			rayY += deltaY
+			continue
+
 		}
 		rayY += deltaY
 		// check for collision on both (and assume it was Y)
@@ -81,10 +99,16 @@ func castRay(rayX float64, rayY float64, rayAngleDegrees float64) []ZBufferItem 
 			return zbufferSlice
 		}
 
-		// check of mirrors
-		if mapData[mapY][mapX] == 2 {
-			deltaX = depth * math.Cos(-rayAngleDegrees)
-			deltaY = depth * math.Sin(-rayAngleDegrees)
+		// check of mirrors on Y
+		if mapData[mapY][mapX] == 2 { //up down
+			rayAngleDegrees = -rayAngleDegrees
+			deltaX = depth * math.Cos(rayAngleDegrees)
+			deltaY = depth * math.Sin(rayAngleDegrees)
+			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 2}
+			zbufferSlice = append(zbufferSlice, newZBufferItem)
+			rayX += deltaX
+			rayY += deltaY
+			continue
 		}
 		// check of other objects on the map
 		if mapData[mapY][mapX] == 9 {
@@ -149,12 +173,14 @@ func main() {
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Raycasting in Go")
 	defer raylib.CloseWindow()
 
-	wallTexture := raylib.LoadTexture("wall5.png") // or "wall.jpg"
+	wallTexture := raylib.LoadTexture("wall5.png")
 	defer raylib.UnloadTexture(wallTexture)
-	wallTextureDark := raylib.LoadTexture("wall5_dark.png") // or "wall.jpg"
+	wallTextureDark := raylib.LoadTexture("wall5_dark.png")
 	defer raylib.UnloadTexture(wallTextureDark)
-	bushTexture := raylib.LoadTexture("bush1.png") // or "wall.jpg"
+	bushTexture := raylib.LoadTexture("raw_wizzard1.png")
 	defer raylib.UnloadTexture(bushTexture)
+	mirrorTexture := raylib.LoadTexture("raw_mirror.png")
+	defer raylib.UnloadTexture(mirrorTexture)
 
 	loadMap("map.txt")
 
@@ -223,24 +249,35 @@ func main() {
 				wallHeight := float32(screenHeight / (dist + 0.0001))
 
 				// Texture coordinate
-				if itemId == 1 {
+				if itemId >= 1 && itemId <= 2 {
+					var textureBright raylib.Texture2D
+					var textureDark raylib.Texture2D
+					if itemId == 1 {
+						textureBright = wallTexture
+						textureDark = wallTextureDark
+					}
+					if itemId == 2 {
+						textureBright = mirrorTexture
+						textureDark = mirrorTexture
+					}
+
 					var texX float32
 					if isHitOnX {
 						texX = float32(hitY - math.Floor(hitY))
 					} else {
 						texX = float32(hitX - math.Floor(hitX))
 					}
-					texX = texX * float32(wallTexture.Width) // map to texture width
+					texX = texX * float32(textureBright.Width) // map to texture width
 
 					// Calculate the rectangle to draw
-					sliceWidth := float32(wallTexture.Width) / float32(numRays)
+					sliceWidth := float32(textureBright.Width) / float32(numRays)
 
 					// Source rectangle from texture
 					srcRect := raylib.Rectangle{
 						X:      texX,
 						Y:      0,
 						Width:  sliceWidth,
-						Height: float32(wallTexture.Height),
+						Height: float32(textureBright.Height),
 					}
 
 					// Destination rectangle
@@ -252,9 +289,9 @@ func main() {
 					}
 					// Draw textured slice
 					if isHitOnX {
-						raylib.DrawTexturePro(wallTexture, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+						raylib.DrawTexturePro(textureBright, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 					} else {
-						raylib.DrawTexturePro(wallTextureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+						raylib.DrawTexturePro(textureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 					}
 				} else {
 					// hitx is -0.5 to 0.5 of the texture

@@ -81,6 +81,11 @@ func castRay(rayX float64, rayY float64, rayAngleDegrees float64) []ZBufferItem 
 			return zbufferSlice
 		}
 
+		// check of mirrors
+		if mapData[mapY][mapX] == 2 {
+			deltaX = depth * math.Cos(-rayAngleDegrees)
+			deltaY = depth * math.Sin(-rayAngleDegrees)
+		}
 		// check of other objects on the map
 		if mapData[mapY][mapX] == 9 {
 			// only execute if we are in the radius of the root of the squere

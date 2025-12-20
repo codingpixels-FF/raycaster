@@ -53,15 +53,19 @@ func getRadius(x, y, cx, cy float64) float64 {
 
 // castRay function returns distance to the wall
 func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem {
-
+	rayXOrigin := rayX
+	rayYOrigin := rayY
 	var zbufferSlice []ZBufferItem
 
 	depth := 0.01
-	deltaX := depth * math.Cos(rayAngleRadians)
-	deltaY := depth * math.Sin(rayAngleRadians)
+	dCosAngle := math.Cos(rayAngleRadians)
+	dSinAngle := math.Sin(rayAngleRadians)
+	deltaX := depth * dCosAngle
+	deltaY := depth * dSinAngle
 	mapX := int(rayX)
 	mapY := int(rayY)
 	totalDepth := depth
+	isSelfNotAddedInThisReflection := false // ignore first pass, you are not able to see self without a mirror
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
 		if totalDepth > 95 {
@@ -77,7 +81,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			return zbufferSlice
 		}
-		// check of mirrors on X
+		// check of mirrors on X - left right
 		if mapData[mapY][mapX] == 2 {
 			rayY += deltaY // correct the ray
 			deltaX = -deltaX
@@ -85,6 +89,10 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			rayX += deltaX
 			rayY += deltaY
+			isSelfNotAddedInThisReflection = true
+			//change the origin - after reflection on mirror
+			dCosAngle = -dCosAngle // cos 180 is 1/2 period
+			//dSinAngle = math.Sin(rayAngleRadians)
 			continue
 
 		}
@@ -104,12 +112,28 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			rayX += deltaX
 			rayY += deltaY
+			isSelfNotAddedInThisReflection = true
 			continue
 		}
+		lenFromSelf := 100.0
+		if totalDepth > 0.6 && isSelfNotAddedInThisReflection {
+			lenFromSelf = getRadius(rayXOrigin, rayYOrigin, rayX, rayY)
+		}
+
 		// check of other objects on the map
-		if mapData[mapY][mapX] == 9 {
+		if mapData[mapY][mapX] == 9 || lenFromSelf <= 0.5 {
 			// only execute if we are in the radius of the root of the squere
-			if getRadius(float64(mapX)+0.5, float64(mapY)+0.5, rayX, rayY) <= 0.5 {
+			var mapSquareCenterX float64
+			var mapSquareCenterY float64
+			if mapData[mapY][mapX] == 9 {
+				mapSquareCenterX = float64(mapX) + 0.5
+				mapSquareCenterY = float64(mapY) + 0.5
+			} else if lenFromSelf < 0.5 {
+				mapSquareCenterX = rayXOrigin
+				mapSquareCenterY = rayYOrigin
+			}
+
+			if getRadius(mapSquareCenterX, mapSquareCenterY, rayX, rayY) <= 0.5 {
 				// record position and fasttravel to end of this object then compute the middle ground to place the object
 				// we know that the object is in the middle of the circle
 
@@ -118,7 +142,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 				baseY := rayY
 				baseTotalDepth := totalDepth
 
-				for getRadius(float64(mapX)+0.5, float64(mapY)+0.5, rayX, rayY) <= 0.5 {
+				for getRadius(mapSquareCenterX, mapSquareCenterY, rayX, rayY) <= 0.5 {
 					totalDepth += depth
 					rayX += deltaX
 					rayY += deltaY
@@ -138,12 +162,30 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 				lenTotalDepthFromObject := (baseTotalDepth + finalTotalDepth) / 2
 
 				//transform it for X
-				lenFromObject := getRadius(float64(mapX)+0.5, float64(mapY)+0.5, lenFromObjectX, lenFromObjectY) //math.Sqrt((float64(mapX)+0.5)*lenFromObjectX + (float64(mapY)+0.5)*lenFromObjectY)
+				lenFromObject := getRadius(mapSquareCenterX, mapSquareCenterY, lenFromObjectX, lenFromObjectY) //math.Sqrt((float64(mapX)+0.5)*lenFromObjectX + (float64(mapY)+0.5)*lenFromObjectY)
 
-				//TODO compute if it is negative or positive len
+				vx := mapSquareCenterX - rayX
+				vy := mapSquareCenterY - rayY
 
-				newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 9}
-				zbufferSlice = append(zbufferSlice, newZBufferItem)
+				// Cross product to determine if we approach the object from right or left
+				cross := dCosAngle*vy - dSinAngle*vx
+				if cross < 0 {
+					lenFromObject = -lenFromObject
+				}
+				if lenFromSelf <= 0.5 {
+					newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 8}
+					zbufferSlice = append(zbufferSlice, newZBufferItem)
+					isSelfNotAddedInThisReflection = false
+					// reset to start for other sprites in same circle
+					rayX = baseX
+					rayY = baseY
+					totalDepth = baseTotalDepth
+					lenFromSelf = 100.0
+				} else {
+					newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 9}
+					zbufferSlice = append(zbufferSlice, newZBufferItem)
+				}
+
 			}
 		}
 	}
@@ -173,8 +215,10 @@ func main() {
 	defer raylib.UnloadTexture(wallTexture)
 	wallTextureDark := raylib.LoadTexture("wall5_dark.png")
 	defer raylib.UnloadTexture(wallTextureDark)
-	bushTexture := raylib.LoadTexture("raw_wizzard1.png")
-	defer raylib.UnloadTexture(bushTexture)
+	wizardTexture := raylib.LoadTexture("raw_wizzard1.png")
+	defer raylib.UnloadTexture(wizardTexture)
+	warrior1Texture := raylib.LoadTexture("raw_warrior1.png")
+	defer raylib.UnloadTexture(warrior1Texture)
 	mirrorTexture := raylib.LoadTexture("raw_mirror.png")
 	defer raylib.UnloadTexture(mirrorTexture)
 
@@ -290,20 +334,31 @@ func main() {
 						raylib.DrawTexturePro(textureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 					}
 				} else {
-					// hitx is -0.5 to 0.5 of the texture
+					// sprites
+					// self player
+					var textureSprite raylib.Texture2D
+					//var textureDark raylib.Texture2D
+					if itemId == 8 {
+						textureSprite = warrior1Texture
+					}
+					if itemId == 9 {
+						textureSprite = wizardTexture
+					}
 
-					texX := 0.5 - float32(hitX)              // map to texture width
-					texX = texX * float32(bushTexture.Width) // map to texture width
+					// hitx is -0.5 to 0.5 of the textureSprite
+
+					texX := 0.5 - float32(hitX)                // map to textureSprite width
+					texX = texX * float32(textureSprite.Width) // map to textureSprite width
 
 					// Calculate the rectangle to draw
-					sliceWidth := float32(bushTexture.Width) / float32(numRays)
+					sliceWidth := float32(textureSprite.Width) / float32(numRays)
 
-					// Source rectangle from texture
+					// Source rectangle from textureSprite
 					srcRect := raylib.Rectangle{
 						X:      texX,
 						Y:      0,
 						Width:  sliceWidth,
-						Height: float32(bushTexture.Height),
+						Height: float32(textureSprite.Height),
 					}
 
 					// Destination rectangle
@@ -313,7 +368,7 @@ func main() {
 						Width:  float32(screenWidth / numRays),
 						Height: wallHeight,
 					}
-					raylib.DrawTexturePro(bushTexture, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+					raylib.DrawTexturePro(textureSprite, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 				}
 			}
 		}

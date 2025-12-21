@@ -68,7 +68,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 	isSelfNotAddedInThisReflection := false // ignore first pass, you are not able to see self without a mirror
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
-		if totalDepth > 95 {
+		if totalDepth > 150 {
 			return zbufferSlice
 		}
 		rayX += deltaX
@@ -120,13 +120,13 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		if totalDepth > 0.6 && isSelfNotAddedInThisReflection {
 			lenFromSelf = getRadius(rayXOrigin, rayYOrigin, rayX, rayY)
 		}
-
+		mapObjectId := mapData[mapY][mapX]
 		// check of other objects on the map
-		if mapData[mapY][mapX] == 9 || lenFromSelf <= 0.5 {
+		if mapObjectId > 2 && mapObjectId < 9 || lenFromSelf <= 0.5 { // 9 is player
 			// only execute if we are in the radius of the root of the squere
 			var mapSquareCenterX float64
 			var mapSquareCenterY float64
-			if mapData[mapY][mapX] == 9 {
+			if mapObjectId > 2 && mapObjectId < 9 {
 				mapSquareCenterX = float64(mapX) + 0.5
 				mapSquareCenterY = float64(mapY) + 0.5
 			} else if lenFromSelf < 0.5 {
@@ -174,7 +174,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 					lenFromObject = -lenFromObject
 				}
 				if lenFromSelf <= 0.5 {
-					newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 8}
+					newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 9} // player
 					zbufferSlice = append(zbufferSlice, newZBufferItem)
 					isSelfNotAddedInThisReflection = false
 					// reset to start for other sprites in same circle
@@ -183,7 +183,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 					totalDepth = baseTotalDepth
 					lenFromSelf = 100.0
 				} else {
-					newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 9}
+					newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, mapObjectId} // npc
 					zbufferSlice = append(zbufferSlice, newZBufferItem)
 				}
 
@@ -222,6 +222,8 @@ func main() {
 	defer raylib.UnloadTexture(warrior1Texture)
 	mirrorTexture := raylib.LoadTexture("raw_mirror.png")
 	defer raylib.UnloadTexture(mirrorTexture)
+	raw_warrior2 := raylib.LoadTexture("raw_warrior2.png")
+	defer raylib.UnloadTexture(raw_warrior2)
 
 	loadMap("map.txt")
 
@@ -338,12 +340,14 @@ func main() {
 					// sprites
 					// self player
 					var textureSprite raylib.Texture2D
-					//var textureDark raylib.Texture2D
 					if itemId == 8 {
-						textureSprite = warrior1Texture
+						textureSprite = wizardTexture
 					}
 					if itemId == 9 {
-						textureSprite = wizardTexture
+						textureSprite = warrior1Texture
+					}
+					if itemId == 7 {
+						textureSprite = raw_warrior2
 					}
 
 					// hitx is -0.5 to 0.5 of the textureSprite
@@ -381,6 +385,7 @@ func main() {
 
 		playerStatusLegend := fmt.Sprintf("x\ny\n>")
 		raylib.DrawText(playerStatusLegend, 200, screenHeight+10, 65, raylib.White)
+		raylib.DrawFPS(screenWidth-90, screenHeight+10)
 
 		raylib.EndDrawing()
 	}

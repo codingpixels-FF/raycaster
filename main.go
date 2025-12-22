@@ -271,6 +271,7 @@ func main() {
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup
 		resultChan := make(chan RayResult, numRays)
+		rayResults := make([][]ZBufferItem, numRays)
 		// Mouse
 		deltaX := float64(raylib.GetMouseDelta().X)
 		player.angle += deltaX * 0.01
@@ -321,15 +322,15 @@ func main() {
 		}()
 
 		// Collect rayResults
-		/*for rayResult := range resultChan {
-			rayResults[rayResult.index] = rayResult
+		for rayResult := range resultChan {
+			rayResults[rayResult.index] = rayResult.zBufferSlice
 		}
 
-		for _, result := range rayResults {
-		*/
-		for rayResult := range resultChan {
-			ray := rayResult.index
-			zBufferItems := rayResult.zBufferSlice
+		for ray, zBufferItems := range rayResults {
+
+			//for rayResult := range resultChan {
+			//	ray := rayResult.index
+			// zBufferItems := rayResult.zBufferSlice
 			lastWallHeight := float32(0.0)
 
 			for i := len(zBufferItems) - 1; i >= 0; i-- {

@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	_ "strconv"
+	"sync"
 
 	raylib "github.com/gen2brain/raylib-go/raylib"
 )
@@ -227,6 +228,12 @@ type Player struct {
 	angle float64 // direction angle
 }
 
+// Define your result type based on castRay's return
+type RayResult struct {
+	index        int
+	zBufferSlice []ZBufferItem // replace with actual type
+}
+
 func main() {
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Raycasting in Go")
 	defer raylib.CloseWindow()
@@ -262,6 +269,8 @@ func main() {
 	raylib.SetTargetFPS(60)
 
 	for !raylib.WindowShouldClose() {
+		var wg sync.WaitGroup
+		resultChan := make(chan RayResult, numRays)
 		// Mouse
 		deltaX := float64(raylib.GetMouseDelta().X)
 		player.angle += deltaX * 0.01
@@ -295,19 +304,43 @@ func main() {
 		raylib.DrawRectangle(0, screenHeightHalf, screenWidth, screenHeight, raylib.NewColor(135, 135, 135, 255))
 
 		for ray := 0; ray < numRays; ray++ {
-			rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle // ray angles in Rad
-			//dist, hitX, hitY, isHitOnX := castRay(player.x, player.y, rayAngleRad)
-			zbufferSlice := castRay(player.x, player.y, rayAngleRad)
+			wg.Add(1)
+			go func(ray int) {
+				defer wg.Done()
+				rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle // ray angles in Rad
+				//dist, hitX, hitY, isHitOnX := castRay(player.x, player.y, rayAngleRad)
+				zbufferSlice := castRay(player.x, player.y, rayAngleRad)
+				resultChan <- RayResult{index: ray, zBufferSlice: zbufferSlice}
+			}(ray)
+		}
+
+		// Close channel once all goroutines are done
+		go func() {
+			wg.Wait()
+			close(resultChan)
+		}()
+
+		// Collect rayResults
+		/*for rayResult := range resultChan {
+			rayResults[rayResult.index] = rayResult
+		}
+
+		for _, result := range rayResults {
+		*/
+		for rayResult := range resultChan {
+			ray := rayResult.index
+			zBufferItems := rayResult.zBufferSlice
 			lastWallHeight := float32(0.0)
 
-			for i := len(zbufferSlice) - 1; i >= 0; i-- {
-				zbufferItem := zbufferSlice[i]
+			for i := len(zBufferItems) - 1; i >= 0; i-- {
+				zbufferItem := zBufferItems[i]
 				itemId := zbufferItem.ItemID
 				itemDist := zbufferItem.Dist
 				hitX := zbufferItem.HitX
 				hitY := zbufferItem.HitY
 				isHitOnX := zbufferItem.IsHitOnX
 				// Calculate the angle difference
+				rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle
 				angleDiff := rayAngleRad - player.angle
 
 				// Perspective correction
@@ -445,6 +478,7 @@ func main() {
 					raylib.DrawTexturePro(textureSprite, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 				}
 			}
+
 		}
 		// status bar overlay
 		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))

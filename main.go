@@ -227,6 +227,8 @@ func main() {
 
 	wallTexture := raylib.LoadTexture("wall5.png")
 	defer raylib.UnloadTexture(wallTexture)
+	wallTextureWhite := raylib.LoadTexture("wall3.jpg")
+	defer raylib.UnloadTexture(wallTextureWhite)
 	wallTextureDark := raylib.LoadTexture("wall5_dark.png")
 	defer raylib.UnloadTexture(wallTextureDark)
 	wizardTexture := raylib.LoadTexture("raw_wizzard1.png")
@@ -333,16 +335,24 @@ func main() {
 						Width:  sliceWidthX,
 						Height: wallHeight/2 - lastWallHeight/2,
 					}
-					// Destination rectangle ROOF
-					destRectRoof := raylib.Rectangle{
+					// Destination rectangle FLOOR
+					destRectFloor := raylib.Rectangle{
 						X:      float32(ray) * (screenWidth / float32(numRays)),
 						Y:      screenHeightHalf + lastWallHeight/2,
 						Width:  float32(screenWidth/numRays) + 1,
 						Height: wallHeight/2 - lastWallHeight/2 + 1,
 					}
+					// Destination rectangle ROOF
+					destRectRoof := raylib.Rectangle{
+						X:      float32(ray) * (screenWidth / float32(numRays)),
+						Y:      screenHeightHalf - wallHeight/2,
+						Width:  float32(screenWidth/numRays) + 1,
+						Height: wallHeight/2 - lastWallHeight/2 + 1,
+					}
 					// Destination rectangle FLOOR
 					// Draw textured slice
-					raylib.DrawTexturePro(textureBright, srcRect, destRectRoof, raylib.Vector2{}, 0, raylib.White)
+					raylib.DrawTexturePro(wallTextureWhite, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.Green)
+					raylib.DrawTexturePro(wallTextureWhite, srcRect, destRectRoof, raylib.Vector2{}, 0, raylib.SkyBlue)
 					//raylib.DrawTexturePro(textureBright, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.White)
 					lastWallHeight = wallHeight
 				} else if itemId >= 1 && itemId <= 2 {

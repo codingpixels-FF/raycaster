@@ -64,6 +64,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 	deltaY := depth * dSinAngle
 	mapX := int(rayX)
 	mapY := int(rayY)
+
 	totalDepth := depth
 	isSelfNotAddedInThisReflection := false // ignore first pass, you are not able to see self without a mirror
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
@@ -72,8 +73,20 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 			return zbufferSlice
 		}
 		rayX += deltaX
+		lastMapX := mapX
+		lastMapY := mapY
 		mapX = int(rayX)
 		mapY = int(rayY) // needs to be recalculated in case of reflection
+
+		if lastMapX != mapX || lastMapY != mapY { // mapData[mapY][mapX] == 0 && but for all but wall
+			// track roof and floor
+			insideTileX := float64(rayX - math.Floor(rayX))
+			insideTileY := float64(rayY - math.Floor(rayY))
+			newZBufferItem := ZBufferItem{totalDepth, insideTileX, insideTileY, true, 0}
+			zbufferSlice = append(zbufferSlice, newZBufferItem)
+			lastMapX = mapX
+			lastMapY = mapY
+		}
 
 		// Check for collision on X
 		if mapData[mapY][mapX] == 1 {
@@ -99,6 +112,17 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		rayY += deltaY
 		// check for collision on both (and assume it was Y)
 		mapY = int(rayY)
+
+		if lastMapX != mapX || lastMapY != mapY { // mapData[mapY][mapX] == 0 && but for all but wall
+			// track roof and floor
+			insideTileX := float64(rayX - math.Floor(rayX))
+			insideTileY := float64(rayY - math.Floor(rayY))
+			newZBufferItem := ZBufferItem{totalDepth, insideTileX, insideTileY, true, 0}
+			zbufferSlice = append(zbufferSlice, newZBufferItem)
+			lastMapX = mapX
+			lastMapY = mapY
+		}
+
 		if mapData[mapY][mapX] == 1 {
 			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 1}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
@@ -277,6 +301,8 @@ func main() {
 			rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle // ray angles in Rad
 			//dist, hitX, hitY, isHitOnX := castRay(player.x, player.y, rayAngleRad)
 			zbufferSlice := castRay(player.x, player.y, rayAngleRad)
+			lastWallHeight := float32(0.0)
+
 			for i := len(zbufferSlice) - 1; i >= 0; i-- {
 				zbufferItem := zbufferSlice[i]
 				itemId := zbufferItem.ItemID
@@ -292,7 +318,45 @@ func main() {
 				wallHeight := float32(screenHeight / (dist + 0.0001))
 
 				// Texture coordinate
-				if itemId >= 1 && itemId <= 2 {
+				if itemId == 0 {
+					if lastWallHeight == 0.0 {
+						lastWallHeight = wallHeight
+						continue
+					}
+
+					var textureBright raylib.Texture2D
+
+					textureBright = wallTexture
+
+					var texX float32
+					texX = float32(hitX) * float32(textureBright.Width) // map to texture width
+					var texY float32
+					texY = float32(hitY) * float32(textureBright.Height) // map to texture width
+
+					// Calculate the rectangle to draw
+					sliceWidthX := float32(textureBright.Width) / float32(numRays)
+					//sliceHeightY := float32(textureBright.Height) / float32(lastWallHeight/2-wallHeight/2)
+
+					// Source rectangle from texture
+					srcRect := raylib.Rectangle{
+						X:      texX,
+						Y:      texY,
+						Width:  sliceWidthX,
+						Height: wallHeight/2 - lastWallHeight/2,
+					}
+					// Destination rectangle ROOF
+					destRectRoof := raylib.Rectangle{
+						X:      float32(ray) * (screenWidth / float32(numRays)),
+						Y:      screenHeightHalf + lastWallHeight/2,
+						Width:  float32(screenWidth/numRays) + 1,
+						Height: wallHeight/2 - lastWallHeight/2 + 1,
+					}
+					// Destination rectangle FLOOR
+					// Draw textured slice
+					raylib.DrawTexturePro(textureBright, srcRect, destRectRoof, raylib.Vector2{}, 0, raylib.White)
+					//raylib.DrawTexturePro(textureBright, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.White)
+					lastWallHeight = wallHeight
+				} else if itemId >= 1 && itemId <= 2 {
 					var textureBright raylib.Texture2D
 					var textureDark raylib.Texture2D
 					if itemId == 1 {

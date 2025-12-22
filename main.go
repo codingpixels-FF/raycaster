@@ -73,19 +73,18 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 			return zbufferSlice
 		}
 		rayX += deltaX
-		lastMapX := mapX
-		lastMapY := mapY
+
 		mapX = int(rayX)
 		mapY = int(rayY) // needs to be recalculated in case of reflection
 
-		if lastMapX != mapX || lastMapY != mapY { // mapData[mapY][mapX] == 0 && but for all but wall
+		if true { //lastMapX != mapX || lastMapY != mapY { // mapData[mapY][mapX] == 0 && but for all but wall
 			// track roof and floor
 			insideTileX := float64(rayX - math.Floor(rayX))
-			insideTileY := float64(rayY - math.Floor(rayY))
+			insideTileY := float64(rayY + deltaY - math.Floor(rayY+deltaY)) // adjust Y for future movement
 			newZBufferItem := ZBufferItem{totalDepth, insideTileX, insideTileY, true, 0}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
-			lastMapX = mapX
-			lastMapY = mapY
+			//lastMapX = mapX
+			//lastMapY = mapY
 		}
 
 		// Check for collision on X
@@ -112,16 +111,6 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		rayY += deltaY
 		// check for collision on both (and assume it was Y)
 		mapY = int(rayY)
-
-		if lastMapX != mapX || lastMapY != mapY { // mapData[mapY][mapX] == 0 && but for all but wall
-			// track roof and floor
-			insideTileX := float64(rayX - math.Floor(rayX))
-			insideTileY := float64(rayY - math.Floor(rayY))
-			newZBufferItem := ZBufferItem{totalDepth, insideTileX, insideTileY, true, 0}
-			zbufferSlice = append(zbufferSlice, newZBufferItem)
-			lastMapX = mapX
-			lastMapY = mapY
-		}
 
 		if mapData[mapY][mapX] == 1 {
 			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 1}

@@ -51,6 +51,50 @@ func getRadius(x, y, cx, cy float64) float64 {
 	return distance
 }
 
+// Check if point (x0, y0) lies on the line defined by point (x1, y1) and angle theta
+func getDistanceOfPointOnLineByAngle(x1, y1, cosTheta, sinTheta, x0, y0 float64) float64 {
+	const epsilon = 0.005 // bigger number because the ray step is high
+
+	// Direction vector of the line
+	//rotrated by +PI/2
+	dx := -sinTheta
+	dy := cosTheta
+	// Vector from the line point to the test point
+	vx := x0 - x1
+	vy := y0 - y1
+
+	// Cross product
+	cross := vx*dy - vy*dx
+
+	if math.Abs(cross) > epsilon { // not the same line
+		return 1.0
+	}
+
+	// Dot product to check if the point lies within the segment length
+	dot := vx*dx + vy*dy
+	if dot < -0.5 { //epsilon {
+		return 1.0 // Point is behind the start point
+	}
+
+	if dot > 0.5 {
+		return 1.0 // Point is beyond the segment length
+	}
+
+	// Check distance from start point to the point is less than or equal to 1
+	distance := math.Hypot(vx, vy)
+	if distance > 0.5 || distance < -0.5 {
+		return 1.0
+	}
+
+	// Cross product against origin to determine approach from left or right
+	cross = vx*sinTheta - vy*cosTheta
+	if cross > 0 {
+		return -distance
+	}
+	return +distance
+
+}
+
 // castRay function returns distance to the wall
 func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem {
 	rayXOrigin := rayX
@@ -67,24 +111,24 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 
 	totalDepth := depth
 	isSelfNotAddedInThisReflection := false // ignore first pass, you are not able to see self without a mirror
+	isCurrentObjectServedInThisTile := false
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
 		if totalDepth > 150 {
 			return zbufferSlice
 		}
 		rayX += deltaX
-
+		lastMaxX := mapX
+		lastMaxY := mapY
 		mapX = int(rayX)
 		mapY = int(rayY) // needs to be recalculated in case of reflection
 
-		if true { //lastMapX != mapX || lastMapY != mapY { // mapData[mapY][mapX] == 0 && but for all but wall
-			// track roof and floor
+		if true {
+			// track roof and floor first
 			insideTileX := float64(rayX - math.Floor(rayX))
 			insideTileY := float64(rayY + deltaY - math.Floor(rayY+deltaY)) // adjust Y for future movement
 			newZBufferItem := ZBufferItem{totalDepth, insideTileX, insideTileY, true, 0}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
-			//lastMapX = mapX
-			//lastMapY = mapY
 		}
 
 		// Check for collision on X
@@ -111,7 +155,9 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		rayY += deltaY
 		// check for collision on both (and assume it was Y)
 		mapY = int(rayY)
-
+		if lastMaxX != mapX || lastMaxY != mapY { // only one object at one tile
+			isCurrentObjectServedInThisTile = false
+		}
 		if mapData[mapY][mapX] == 1 {
 			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 1}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
@@ -135,7 +181,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		}
 		mapObjectId := mapData[mapY][mapX]
 		// check of other objects on the map
-		if mapObjectId > 2 && mapObjectId < 9 || lenFromSelf <= 0.5 { // 9 is player
+		if (mapObjectId > 2 && mapObjectId < 9 && isCurrentObjectServedInThisTile == false) || lenFromSelf <= 0.5 { // 9 is player
 			// only execute if we are in the radius of the root of the squere
 			var mapSquareCenterX float64
 			var mapSquareCenterY float64
@@ -147,59 +193,19 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 				mapSquareCenterY = rayYOrigin
 			}
 
-			if getRadius(mapSquareCenterX, mapSquareCenterY, rayX, rayY) <= 0.5 {
-				// record position and fasttravel to end of this object then compute the middle ground to place the object
-				// we know that the object is in the middle of the circle
+			textureDistance := getDistanceOfPointOnLineByAngle(mapSquareCenterX, mapSquareCenterY, dCosAngle, dSinAngle, rayX, rayY)
 
-				// record start values
-				baseX := rayX
-				baseY := rayY
-				baseTotalDepth := totalDepth
-
-				for getRadius(mapSquareCenterX, mapSquareCenterY, rayX, rayY) <= 0.5 {
-					totalDepth += depth
-					rayX += deltaX
-					rayY += deltaY
-				}
-				// we are just out of the circle, move one step back
-				totalDepth -= depth
-				rayX -= deltaX
-				rayY -= deltaY
-
-				// record end values
-				finalObjectX := rayX
-				finalObjectY := rayY
-				finalTotalDepth := totalDepth
-
-				lenFromObjectX := (baseX + finalObjectX) / 2
-				lenFromObjectY := (baseY + finalObjectY) / 2
-				lenTotalDepthFromObject := (baseTotalDepth + finalTotalDepth) / 2
-
-				//transform it for X
-				lenFromObject := getRadius(mapSquareCenterX, mapSquareCenterY, lenFromObjectX, lenFromObjectY) //math.Sqrt((float64(mapX)+0.5)*lenFromObjectX + (float64(mapY)+0.5)*lenFromObjectY)
-
-				vx := mapSquareCenterX - rayX
-				vy := mapSquareCenterY - rayY
-
-				// Cross product to determine if we approach the object from right or left
-				cross := dCosAngle*vy - dSinAngle*vx
-				if cross < 0 {
-					lenFromObject = -lenFromObject
-				}
+			if textureDistance < 0.5 && textureDistance > -0.5 {
 				if lenFromSelf <= 0.5 {
-					newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, 9} // player
+					newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, 9} // player
 					zbufferSlice = append(zbufferSlice, newZBufferItem)
 					isSelfNotAddedInThisReflection = false
-					// reset to start for other sprites in same circle
-					rayX = baseX
-					rayY = baseY
-					totalDepth = baseTotalDepth
 					lenFromSelf = 100.0
 				} else {
-					newZBufferItem := ZBufferItem{lenTotalDepthFromObject, lenFromObject, 0, false, mapObjectId} // npc
+					newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, mapObjectId} // npc
 					zbufferSlice = append(zbufferSlice, newZBufferItem)
+					isCurrentObjectServedInThisTile = true
 				}
-
 			}
 		}
 	}

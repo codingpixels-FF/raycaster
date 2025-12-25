@@ -238,12 +238,8 @@ func main() {
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Raycasting in Go")
 	defer raylib.CloseWindow()
 
-	wallTexture := raylib.LoadTexture("wall5.png")
+	wallTexture := raylib.LoadTexture("wall_all.png")
 	defer raylib.UnloadTexture(wallTexture)
-	wallTextureWhite := raylib.LoadTexture("wall3.jpg")
-	defer raylib.UnloadTexture(wallTextureWhite)
-	wallTextureDark := raylib.LoadTexture("wall5_dark.png")
-	defer raylib.UnloadTexture(wallTextureDark)
 	wizardTexture := raylib.LoadTexture("raw_wizzard1.png")
 	defer raylib.UnloadTexture(wizardTexture)
 	warrior1Texture := raylib.LoadTexture("raw_warrior1.png")
@@ -391,16 +387,15 @@ func main() {
 					}
 					// Destination rectangle FLOOR
 					// Draw textured slice
-					raylib.DrawTexturePro(wallTextureWhite, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.Green)
-					raylib.DrawTexturePro(wallTextureWhite, srcRect, destRectRoof, raylib.Vector2{}, 0, raylib.SkyBlue)
-					//raylib.DrawTexturePro(textureBright, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.White)
+					raylib.DrawTexturePro(wallTexture, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.LightGray)
+					raylib.DrawTexturePro(wallTexture, srcRect, destRectRoof, raylib.Vector2{}, 0, raylib.DarkGray)
 					lastWallHeight = wallHeight
 				} else if itemId >= 1 && itemId <= 2 {
 					var textureBright raylib.Texture2D
 					var textureDark raylib.Texture2D
 					if itemId == 1 {
 						textureBright = wallTexture
-						textureDark = wallTextureDark
+						textureDark = wallTexture //wallTextureDark
 					}
 					if itemId == 2 {
 						textureBright = mirrorTexture
@@ -435,9 +430,9 @@ func main() {
 					}
 					// Draw textured slice
 					if isHitOnX {
-						raylib.DrawTexturePro(textureBright, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+						raylib.DrawTexturePro(textureBright, srcRect, destRect, raylib.Vector2{}, 0, raylib.Blue)
 					} else {
-						raylib.DrawTexturePro(textureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
+						raylib.DrawTexturePro(textureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.DarkBlue)
 					}
 				} else {
 					// sprites

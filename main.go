@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"image/color"
 	"math"
 	"os"
 	_ "strconv"
@@ -234,12 +235,76 @@ type RayResult struct {
 	zBufferSlice []ZBufferItem // replace with actual type
 }
 
+func createTextureFromPixelArray(columnPixels [][]raylib.Color) raylib.Texture2D {
+	height := len(columnPixels)
+	if height == 0 {
+		return raylib.Texture2D{} // Empty texture
+	}
+	width := len(columnPixels[0])
+
+	// Flatten pixel array into a byte slice in RGBA format
+	pixelData := make([]byte, width*height*4)
+	index := 0
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			col := columnPixels[y][x]
+			pixelData[index+0] = col.R
+			pixelData[index+1] = col.G
+			pixelData[index+2] = col.B
+			pixelData[index+3] = col.A
+			index += 4
+		}
+	}
+
+	// Create an rl.Image from raw pixel data
+	//image := raylib.ImageFrom  ImageFromRaw(width, height, raylib.UncompressedR8G8B8A8, pixelData)
+	image := raylib.LoadImageFromMemory("", pixelData, int32(width*height*4))
+
+	// Convert rl.Image to rl.Texture2D
+	texture := raylib.LoadTextureFromImage(image)
+
+	// Free the image after creating texture
+	raylib.UnloadImage(image)
+
+	return texture
+}
+
+// Function to get pixel color at (x, y)
+func getPixelColorAt(image *raylib.Image, x, y int) raylib.Color {
+	if image.Format != raylib.UncompressedR8g8b8a8 { //UNCOMPRESSED_R8G8B8A8
+		// Handle or convert the image format
+		return raylib.Color{255, 0, 0, 255}
+	}
+
+	width := int(image.Width)
+	height := int(image.Height)
+
+	if x < 0 || x > width || y < 0 || y > height {
+		// Out of bounds
+		return raylib.Color{0, 0, 0, 0}
+	}
+
+	// Assuming UNCOMPRESSED_R8G8B8A8 format (4 bytes per pixel)
+	bytesPerPixel := 4
+	index := (y*width + x) * bytesPerPixel
+
+	// Convert unsafe.Pointer to a byte slice
+	dataSlice := (*[1 << 30]byte)(image.Data)[:width*height*bytesPerPixel]
+
+	r := dataSlice[index+0]
+	g := dataSlice[index+1]
+	b := dataSlice[index+2]
+	a := dataSlice[index+3]
+
+	return raylib.Color{r, g, b, a}
+}
+
 func main() {
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Raycasting in Go")
 	defer raylib.CloseWindow()
 
-	wallTexture := raylib.LoadTexture("wall_all.png")
-	defer raylib.UnloadTexture(wallTexture)
+	wallTexture := raylib.LoadImage("wall_all.png")
+	defer raylib.UnloadImage(wallTexture)
 	wizardTexture := raylib.LoadTexture("raw_wizzard1.png")
 	defer raylib.UnloadTexture(wizardTexture)
 	warrior1Texture := raylib.LoadTexture("raw_warrior1.png")
@@ -264,7 +329,26 @@ func main() {
 
 	raylib.SetTargetFPS(60)
 
+	bufferTexture := raylib.LoadRenderTexture(screenWidth, screenHeight)
+	defer raylib.UnloadRenderTexture(bufferTexture)
+
+	// Fill your pixelColors with your scene data
+
+	// Convert to byte slice
+	pixels := make([]color.RGBA, screenWidth*screenHeight)
+
+	// Create a 2D array for the pixel data of one column
+	columnPixels := make([][]raylib.Color, screenHeight)
+
+	// Initialize the array
+	for y := 0; y < screenHeight; y++ {
+		columnPixels[y] = make([]raylib.Color, screenWidth)
+	}
+
+	//pixels := []color.RGBAmake([]byte, screenWidth*screenHeight*4) // 4 bytes per pixel (RGBA)
+
 	for !raylib.WindowShouldClose() {
+
 		var wg sync.WaitGroup
 		resultChan := make(chan RayResult, numRays)
 		rayResults := make([][]ZBufferItem, numRays)
@@ -351,21 +435,21 @@ func main() {
 						continue
 					}
 
-					var textureBright raylib.Texture2D
+					//var textureBright raylib.Texture2D
 
-					textureBright = wallTexture
+					//textureBright := wallTexture
 
-					var texX float32
+					/*var texX float32
 					texX = float32(hitX) * float32(textureBright.Width) // map to texture width
 					var texY float32
 					texY = float32(hitY) * float32(textureBright.Height) // map to texture width
 
 					// Calculate the rectangle to draw
-					sliceWidthX := float32(textureBright.Width) / float32(numRays)
+					sliceWidthX := float32(textureBright.Width) / float32(numRays)*/
 					//sliceHeightY := float32(textureBright.Height) / float32(lastWallHeight/2-wallHeight/2)
 
 					// Source rectangle from texture
-					srcRect := raylib.Rectangle{
+					/*srcRect := raylib.Rectangle{
 						X:      texX,
 						Y:      texY,
 						Width:  sliceWidthX,
@@ -384,18 +468,35 @@ func main() {
 						Y:      screenHeightHalf - wallHeight/2,
 						Width:  float32(screenWidth/numRays) + 1,
 						Height: wallHeight/2 - lastWallHeight/2 + 1,
-					}
+					}*/
 					// Destination rectangle FLOOR
 					// Draw textured slice
-					raylib.DrawTexturePro(wallTexture, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.LightGray)
-					raylib.DrawTexturePro(wallTexture, srcRect, destRectRoof, raylib.Vector2{}, 0, raylib.DarkGray)
+					x := int(float32(ray) * (screenWidth / float32(numRays)))
+					y := int(screenHeightHalf + lastWallHeight/2)
+					if y < 0 {
+						y = 0
+					} else if y >= screenHeight-1 {
+						y = screenHeight - 1
+					}
+
+					if x < 0 {
+						x = 0
+					} else if x >= screenWidth-1 {
+						x = screenWidth - 1
+					}
+					myColor := getPixelColorAt(wallTexture, x, y)
+					columnPixels[y][x] = myColor
+					texture := createTextureFromPixelArray(columnPixels)
+					raylib.DrawTexture(texture, 0, 0, raylib.White)
+					//raylib.DrawTexturePro(wallTexture, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.LightGray)
+					//raylib.DrawTexturePro(wallTexture, srcRect, destRectRoof, raylib.Vector2{}, 0, raylib.DarkGray)
 					lastWallHeight = wallHeight
 				} else if itemId >= 1 && itemId <= 2 {
 					var textureBright raylib.Texture2D
 					var textureDark raylib.Texture2D
 					if itemId == 1 {
-						textureBright = wallTexture
-						textureDark = wallTexture //wallTextureDark
+						textureBright = wizardTexture
+						textureDark = wizardTexture //wallTextureDark
 					}
 					if itemId == 2 {
 						textureBright = mirrorTexture
@@ -476,6 +577,9 @@ func main() {
 			}
 
 		}
+
+		raylib.UpdateTexture(bufferTexture.Texture, pixels)
+		raylib.DrawTexture(bufferTexture.Texture, 0, 0, raylib.White)
 		// status bar overlay
 		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))
 		raylib.DrawRectangle(0, screenHeight+10, screenWidth, screenHeight+statusBarHeight, raylib.NewColor(0, 0, 255, 255))

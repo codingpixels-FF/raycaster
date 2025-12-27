@@ -319,7 +319,7 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 		r, g, b, a := fillColor.RGBA()
 		fillColorUint32 := a>>8<<24 | r>>8<<16 | g>>8<<8 | b>>8
 
-		bufferImage[rayX+numRays*y] = fillColorUint32
+		bufferImage[rayX+numRays*y] += fillColorUint32
 	}
 }
 

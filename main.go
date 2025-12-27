@@ -289,7 +289,7 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	}
 }
 
-func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float64, currentDistance float64, rayX int) {
+func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float64, currentDistance float64, rayX int, isMirror bool, isWall bool, isHitOnX bool) {
 	// hitX is from 0-1
 	// hitY is from 0-1
 	textureImageImageWidth := 256
@@ -315,11 +315,61 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 	for y := spriteStartY; y < spriteEndY; y++ {
 		texCorY++
 		hitYonTexture := float64(texCorY) / texSizeY * float64(textureImageImageHeight)
+
+		//fillColorUint32 := a>>8<<24 | r>>8<<16 | g>>8<<8 | b>>8
+		// Extract fill color and alpha
 		fillColor := textureImageImage.At(int(hitXonTexture), int(hitYonTexture))
 		r, g, b, a := fillColor.RGBA()
-		fillColorUint32 := a>>8<<24 | r>>8<<16 | g>>8<<8 | b>>8
 
-		bufferImage[rayX+numRays*y] += fillColorUint32
+		if isWall {
+			if isMirror {
+				if isHitOnX {
+					bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g/2>>8<<8 | r/2>>8
+				} else {
+					bufferImage[rayX+numRays*y] = a>>8<<24 | b*2/3>>8<<16 | g/2>>8<<8 | r/2>>8
+				}
+			} else {
+				if isHitOnX {
+					bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
+				} else {
+					bufferImage[rayX+numRays*y] = a>>8<<24 | b/3*2>>8<<16 | g>>8<<8 | r>>8
+				}
+			}
+
+		} else {
+			// Extract existing pixel in buffer
+			dest := bufferImage[rayX+numRays*y]
+			//destA := (dest >> 24) & 0xFF
+			destB := (dest >> 16) & 0xFF
+			destG := (dest >> 8) & 0xFF
+			destR := dest & 0xFF
+
+			// Convert to 8-bit values
+			//srcA := a >> 8 // normalize alpha to 0-255
+			srcR := r >> 8
+			srcG := g >> 8
+			srcB := b >> 8
+
+			// Normalize alpha for blending
+			alpha := float64(a) / 255.0
+
+			// Blend each component
+			/*blendedR := uint8((float64(destR)*(1-alpha) + float64(srcR)*alpha))
+			blendedG := uint8((float64(destG)*(1-alpha) + float64(srcG)*alpha))
+			blendedB := uint8((float64(destB)*(1-alpha) + float64(srcB)*alpha))*/
+			blendedR := uint32((float64(srcR)*(1-alpha) + float64(destR)*alpha))
+			blendedG := uint32((float64(srcG)*(1-alpha) + float64(destG)*alpha))
+			blendedB := uint32((float64(srcB)*(1-alpha) + float64(destB)*alpha))
+
+			// Optionally, set new alpha (if you want to update alpha)
+			// For now, keep dest alpha or set to 255 if opaque
+			//newAlpha := 255
+
+			// Recombine to uint32
+			bufferImage[rayX+numRays*y] = uint32(alpha)<<24 | uint32(blendedB)<<16 | uint32(blendedG)<<8 | uint32(blendedR)
+		}
+
+		//bufferImage[rayX+numRays*y] = fillColorUint32
 	}
 }
 
@@ -392,6 +442,7 @@ func main() {
 	//pixels := []color.RGBAmake([]byte, screenWidth*screenHeight*4) // 4 bytes per pixel (RGBA)
 	for !raylib.WindowShouldClose() {
 		pixels := make([]uint32, numRays*screenHeight)
+		
 		var wg sync.WaitGroup
 		//var mu sync.Mutex
 		//resultChan := make(chan RayResult, numRays)
@@ -557,8 +608,13 @@ func main() {
 							Height: wallHeight,
 						}*/
 						// Draw textured slice
+						isWall := true
+						isMirror := false
+						if itemId == 2 {
+							isMirror = true
+						}
 
-						drawSprite(pixels, imageOnWall, float64(texX), currentDistance, ray)
+						drawSprite(pixels, imageOnWall, float64(texX), currentDistance, ray, isWall, isMirror, isHitOnX)
 						/*
 							if isHitOnX {
 								raylib.DrawTexturePro(textureBright, srcRect, destRect, raylib.Vector2{}, 0, raylib.Blue)
@@ -607,7 +663,7 @@ func main() {
 							Height: wallHeight,
 						}*/
 
-						drawSprite(pixels, textureImage, float64(texX), currentDistance, ray)
+						drawSprite(pixels, textureImage, float64(texX), currentDistance, ray, false, false, false)
 						//raylib.DrawTexturePro(textureSprite, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 					}
 				}

@@ -311,6 +311,7 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 	}
 
 	texSizeY := float64(spriteEndY - spriteStartY)
+
 	for y := spriteStartY; y < spriteEndY; y++ {
 		texCorY++
 		hitYonTexture := float64(texCorY) / texSizeY * float64(textureImageImageHeight)
@@ -335,15 +336,36 @@ func main() {
 	wallImage := raylib.LoadImageFromTexture(wallTexture)      // Loaded in CPU memory (RAM)
 	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
 	defer raylib.UnloadImage(wallImage)
+	// Create a 2D array for the pixel data of one column
+	wallImageImage := wallImage.ToImage()
 
-	/*wizardTexture := raylib.LoadTexture("raw_wizzard1.png")
+	wizardTexture := raylib.LoadTexture("256_wizzard1.png")
 	defer raylib.UnloadTexture(wizardTexture)
-	warrior1Texture := raylib.LoadTexture("raw_warrior1.png")
+	wizardImage := raylib.LoadImageFromTexture(wizardTexture)    // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(wizardImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
+	defer raylib.UnloadImage(wizardImage)
+	wizardImageImage := wizardImage.ToImage()
+
+	warrior1Texture := raylib.LoadTexture("256_warrior1.png")
 	defer raylib.UnloadTexture(warrior1Texture)
+	warrior1Image := raylib.LoadImageFromTexture(warrior1Texture)  // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(warrior1Image, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
+	defer raylib.UnloadImage(warrior1Image)
+	warrior1ImageImage := warrior1Image.ToImage()
+
 	mirrorTexture := raylib.LoadTexture("raw_mirror.png")
 	defer raylib.UnloadTexture(mirrorTexture)
-	raw_warrior2 := raylib.LoadTexture("raw_warrior2.png")
-	defer raylib.UnloadTexture(raw_warrior2)*/
+	mirrorImage := raylib.LoadImageFromTexture(mirrorTexture)    // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(mirrorImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
+	defer raylib.UnloadImage(mirrorImage)
+	//TODO mirrorImageImage := mirrorImage.ToImage()
+
+	warrior2Texture := raylib.LoadTexture("256_warrior2.png")
+	defer raylib.UnloadTexture(warrior2Texture)
+	warrior2Image := raylib.LoadImageFromTexture(warrior2Texture)  // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(warrior2Image, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
+	defer raylib.UnloadImage(warrior2Image)
+	warrior2ImageImage := warrior2Image.ToImage()
 
 	loadMap("map.txt")
 
@@ -366,9 +388,6 @@ func main() {
 
 	// Convert to byte slice
 	//pixels := make([]color.RGBA, screenWidth*screenHeight)
-
-	// Create a 2D array for the pixel data of one column
-	wallImageImage := wallImage.ToImage()
 
 	//pixels := []color.RGBAmake([]byte, screenWidth*screenHeight*4) // 4 bytes per pixel (RGBA)
 	for !raylib.WindowShouldClose() {
@@ -547,27 +566,31 @@ func main() {
 					} else {
 						// sprites
 						// self player
-						/*var textureSprite raylib.Texture2D
+						//var textureSprite raylib.Texture2D
+						var textureImage image.Image
 						if itemId == 8 {
-							textureSprite = wizardTexture
+							//textureSprite = wizardTexture
+							textureImage = wizardImageImage
 						}
 						if itemId == 9 {
-							textureSprite = warrior1Texture
+							//textureSprite = warrior1Texture
+							textureImage = warrior1ImageImage
 						}
 						if itemId == 7 {
-							textureSprite = raw_warrior2
+							//textureSprite = warrior2Texture
+							textureImage = warrior2ImageImage
 						}
 
 						// hitx is -0.5 to 0.5 of the textureSprite
 
-						texX := 0.5 - float32(hitX)                // map to textureSprite width
-						texX = texX * float32(textureSprite.Width) // map to textureSprite width
+						texX := 0.5 - float32(hitX) // map to textureSprite width
+						//texX = texX * float32(textureSprite.Width) // map to textureSprite width
 
 						// Calculate the rectangle to draw
-						sliceWidth := float32(textureSprite.Width) / float32(numRays)
+						//sliceWidth := float32(textureSprite.Width) / float32(numRays)
 
 						// Source rectangle from textureSprite
-						srcRect := raylib.Rectangle{
+						/*srcRect := raylib.Rectangle{
 							X:      texX,
 							Y:      0,
 							Width:  sliceWidth,
@@ -580,8 +603,10 @@ func main() {
 							Y:      screenHeightHalf - wallHeight/2,
 							Width:  float32(screenWidth / numRays),
 							Height: wallHeight,
-						}
-						raylib.DrawTexturePro(textureSprite, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)*/
+						}*/
+
+						drawSprite(pixels, textureImage, float64(texX), currentDistance, ray)
+						//raylib.DrawTexturePro(textureSprite, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 					}
 				}
 

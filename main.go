@@ -322,18 +322,11 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 		r, g, b, a := fillColor.RGBA()
 
 		if isWall {
-			if isMirror {
-				if isHitOnX {
-					bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g/2>>8<<8 | r/2>>8
-				} else {
-					bufferImage[rayX+numRays*y] = a>>8<<24 | b*2/3>>8<<16 | g/2>>8<<8 | r/2>>8
-				}
+
+			if isHitOnX {
+				bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
 			} else {
-				if isHitOnX {
-					bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
-				} else {
-					bufferImage[rayX+numRays*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
-				}
+				bufferImage[rayX+numRays*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
 			}
 
 		} else {
@@ -367,7 +360,7 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 
 			// Recombine to uint32
 			if a > 240 {
-				bufferImage[rayX+numRays*y] = uint32(a)<<24 | uint32(b)<<16 | uint32(g)<<8 | uint32(r)
+				bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8 //uint32(a)<<24 | uint32(b)<<16 | uint32(g)<<8 | uint32(r)
 			}
 
 		}
@@ -615,6 +608,7 @@ func main() {
 						isMirror := false
 						if itemId == 2 {
 							isMirror = true
+							isWall = false
 						}
 
 						drawSprite(pixels, imageOnWall, float64(texX), currentDistance, ray, isMirror, isWall, isHitOnX)

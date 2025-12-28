@@ -6,7 +6,6 @@ import (
 	"image"
 	"math"
 	"os"
-	"runtime"
 	_ "strconv"
 	"sync"
 	"unsafe"
@@ -350,7 +349,6 @@ func main() {
 	// Set the maximum number of CPU cores to use
 	// Set to debug or trace level for detailed logs
 	raylib.SetTraceLogLevel(raylib.LogError)
-	runtime.GOMAXPROCS(runtime.NumCPU()) // For example, limit to 2 cores
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Raycasting in Go")
 	defer raylib.CloseWindow()
 
@@ -403,9 +401,19 @@ func main() {
 	fov := math.Pi / 2.0 // 90 degrees
 
 	raylib.SetTargetFPS(60)
+	pixels := make([]uint32, numRays*screenHeight)
+	// render
+	dataPtr := unsafe.Pointer(&pixels[0])
+
+	img := raylib.Image{
+		Data:    dataPtr,
+		Width:   screenWidth,
+		Height:  screenHeight,
+		Mipmaps: 1,
+		Format:  raylib.UncompressedR8g8b8a8,
+	}
 
 	for !raylib.WindowShouldClose() {
-		pixels := make([]uint32, numRays*screenHeight)
 
 		var wg sync.WaitGroup
 
@@ -524,22 +532,11 @@ func main() {
 		// Close channel once all goroutines are done
 		wg.Wait()
 
-		// render
-		dataPtr := unsafe.Pointer(&pixels[0])
-
-		img := raylib.Image{
-			Data:    dataPtr,
-			Width:   screenWidth,
-			Height:  screenHeight,
-			Mipmaps: 1,
-			Format:  raylib.UncompressedR8g8b8a8,
-		}
-
 		imageBufferTexture := raylib.LoadTextureFromImage(&img)
 		defer raylib.UnloadImage(&img)
 
 		raylib.BeginDrawing()
-		raylib.ClearBackground(raylib.NewColor(25, 25, 25, 255))
+		raylib.ClearBackground(raylib.NewColor(0, 0, 0, 255))
 		raylib.DrawTexture(imageBufferTexture, 0, 0, raylib.White)
 
 		// status bar overlay
@@ -555,5 +552,4 @@ func main() {
 		raylib.EndDrawing()
 		raylib.UnloadTexture(imageBufferTexture)
 	}
-
 }

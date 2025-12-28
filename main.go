@@ -330,42 +330,19 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 			}
 
 		} else {
-			// Extract existing pixel in buffer
-			/*dest := bufferImage[rayX+numRays*y]
-			//destA := (dest >> 24) & 0xFF
-			destB := (dest >> 16) & 0xFF
-			destG := (dest >> 8) & 0xFF
-			destR := dest & 0xFF
-
-			// Convert to 8-bit values
-			//srcA := a >> 8 // normalize alpha to 0-255
-			srcR := r >> 8
-			srcG := g >> 8
-			srcB := b >> 8
-
-			// Normalize alpha for blending
-			alpha := float64(a) / 255.0
-
-			// Blend each component
-			blendedR := uint8((float64(destR)*(1-alpha) + float64(srcR)*alpha))
-			blendedG := uint8((float64(destG)*(1-alpha) + float64(srcG)*alpha))
-			blendedB := uint8((float64(destB)*(1-alpha) + float64(srcB)*alpha))*/
-			/*blendedR := uint32((float64(srcR)*(1-alpha) + float64(destR)*alpha))
-			blendedG := uint32((float64(srcG)*(1-alpha) + float64(destG)*alpha))
-			blendedB := uint32((float64(srcB)*(1-alpha) + float64(destB)*alpha))*/
-
-			// Optionally, set new alpha (if you want to update alpha)
-			// For now, keep dest alpha or set to 255 if opaque
-			//newAlpha := 255
-
-			// Recombine to uint32
-			if a > 240 {
-				bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8 //uint32(a)<<24 | uint32(b)<<16 | uint32(g)<<8 | uint32(r)
+			if a > 240 { // simple transparency
+				if isMirror {
+					if isHitOnX {
+						bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+					} else {
+						bufferImage[rayX+numRays*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+					}
+				} else {
+					// 2D sprite
+					bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
+				}
 			}
-
 		}
-
-		//bufferImage[rayX+numRays*y] = fillColorUint32
 	}
 }
 
@@ -427,22 +404,11 @@ func main() {
 
 	raylib.SetTargetFPS(60)
 
-	bufferTexture := raylib.LoadRenderTexture(screenWidth, screenHeight)
-	defer raylib.UnloadRenderTexture(bufferTexture)
-
-	// Fill your pixelColors with your scene data
-
-	// Convert to byte slice
-	//pixels := make([]color.RGBA, screenWidth*screenHeight)
-
-	//pixels := []color.RGBAmake([]byte, screenWidth*screenHeight*4) // 4 bytes per pixel (RGBA)
 	for !raylib.WindowShouldClose() {
 		pixels := make([]uint32, numRays*screenHeight)
 
 		var wg sync.WaitGroup
-		//var mu sync.Mutex
-		//resultChan := make(chan RayResult, numRays)
-		//rayResults := make([][]ZBufferItem, numRays)
+
 		// Mouse
 		deltaX := float64(raylib.GetMouseDelta().X)
 		player.angle += deltaX * 0.01
@@ -472,18 +438,13 @@ func main() {
 			player.y += 0.1 * math.Sin(player.angle+math.Pi/2)
 		}
 
-		//raylib.DrawRectangle(0, screenHeightHalf, screenWidth, screenHeight, raylib.NewColor(135, 135, 135, 255))
-
 		for ray := 0; ray < numRays; ray++ {
 			wg.Add(1)
 			go func(ray int) {
 				defer wg.Done()
-				//fmt.Printf("Goroutine %d is running\n", ray)
+
 				rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle // ray angles in Rad
-				//dist, hitX, hitY, isHitOnX := castRay(player.x, player.y, rayAngleRad)
 				zbufferSlice := castRay(player.x, player.y, rayAngleRad)
-				//var zbufferSlice []ZBufferItem
-				//resultChan <- RayResult{index: ray, zBufferSlice: zbufferSlice}
 
 				lastDistance := float64(0.0)
 
@@ -495,12 +456,10 @@ func main() {
 					hitY := zbufferItem.HitY
 					isHitOnX := zbufferItem.IsHitOnX
 					// Calculate the angle difference
-					//rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle
 					angleDiff := rayAngleRad - player.angle
 
 					// Perspective correction
 					currentDistance := itemDist * math.Cos(angleDiff)
-					//wallHeight := float32(screenHeight / (currentDistance + 0.0001))
 
 					// Texture coordinate
 					if itemId == 0 {
@@ -509,66 +468,11 @@ func main() {
 							continue
 						}
 
-						//var textureBright raylib.Texture2D
-
-						//textureBright := wallTexture
-
-						/*var texX float64
-						texX = float64(hitX) * float64(wallTexture.Width) // map to texture width
-						var texY float64
-						texY = float64(hitY) * float64(wallTexture.Height) // map to texture width*/
-
-						// Calculate the rectangle to draw
-						//sliceWidthX := float32(textureBright.Width) / float32(numRays)
-						//sliceHeightY := float32(textureBright.Height) / float32(lastDistance/2-wallHeight/2)
-
-						// Source rectangle from texture
-						/*srcRect := raylib.Rectangle{
-							X:      texX,
-							Y:      texY,
-							Width:  sliceWidthX,
-							Height: wallHeight/2 - lastDistance/2,
-						}
-						// Destination rectangle FLOOR
-						destRectFloor := raylib.Rectangle{
-							X:      float32(ray) * (screenWidth / float32(numRays)),
-							Y:      screenHeightHalf + lastDistance/2,
-							Width:  float32(screenWidth/numRays) + 1,
-							Height: wallHeight/2 - lastDistance/2 + 1,
-						}
-						// Destination rectangle ROOF
-						destRectRoof := raylib.Rectangle{
-							X:      float32(ray) * (screenWidth / float32(numRays)),
-							Y:      screenHeightHalf - wallHeight/2,
-							Width:  float32(screenWidth/numRays) + 1,
-							Height: wallHeight/2 - lastDistance/2 + 1,
-						}*/
-						// Destination rectangle FLOOR
-						// Draw textured slice
-						x := int(float32(ray) * (screenWidth / float32(numRays)))
-						y := int(screenHeightHalf + lastDistance/2)
-						if y < 0 {
-							y = 0
-						} else if y >= screenHeight-1 {
-							y = screenHeight - 1
-						}
-
-						if x < 0 {
-							x = 0
-						} else if x >= screenWidth-1 {
-							x = screenWidth - 1
-						}
-
 						drawFloorAndCeiling(pixels, wallImageImage, hitX, hitY, lastDistance, currentDistance, ray)
-						//mu.Unlock()
-						//texture := createTextureFromPixelArray(arrayOfArrayRaylibColor)
-						//raylib.DrawTexture(texture, 0, 0, raylib.White)
-						//raylib.DrawTexturePro(wallTexture, srcRect, destRectFloor, raylib.Vector2{}, 0, raylib.LightGray)
-						//raylib.DrawTexturePro(wallTexture, srcRect, destRectRoof, raylib.Vector2{}, 0, raylib.DarkGray)
+
 						lastDistance = currentDistance
 					} else if itemId >= 1 && itemId <= 2 {
-						//var textureBright raylib.Texture2D
-						//var textureDark raylib.Texture2D
+
 						var imageOnWall image.Image
 						if itemId == 1 {
 							imageOnWall = wallImageImage
@@ -583,26 +487,7 @@ func main() {
 						} else {
 							texX = float32(hitX - math.Floor(hitX))
 						}
-						//texX = texX * 256 // map to texture width
 
-						// Calculate the rectangle to draw
-						//sliceWidth := float32(256) / float32(numRays)
-
-						// Source rectangle from texture
-						/*srcRect := raylib.Rectangle{
-							X:      texX,
-							Y:      0,
-							Width:  sliceWidth,
-							Height: float32(textureBright.Height),
-						}
-
-						// Destination rectangle
-						destRect := raylib.Rectangle{
-							X:      float32(ray) * (screenWidth / float32(numRays)),
-							Y:      screenHeightHalf - wallHeight/2,
-							Width:  float32(screenWidth / numRays),
-							Height: wallHeight,
-						}*/
 						// Draw textured slice
 						isWall := true
 						isMirror := false
@@ -612,56 +497,25 @@ func main() {
 						}
 
 						drawSprite(pixels, imageOnWall, float64(texX), currentDistance, ray, isMirror, isWall, isHitOnX)
-						/*
-							if isHitOnX {
-								raylib.DrawTexturePro(textureBright, srcRect, destRect, raylib.Vector2{}, 0, raylib.Blue)
-							} else {
-								raylib.DrawTexturePro(textureDark, srcRect, destRect, raylib.Vector2{}, 0, raylib.DarkBlue)
-							}*/
+
 					} else {
 						// sprites
-						// self player
-						//var textureSprite raylib.Texture2D
+
 						var textureImage image.Image
 						if itemId == 8 {
-							//textureSprite = wizardTexture
 							textureImage = wizardImageImage
 						}
 						if itemId == 9 {
-							//textureSprite = warrior1Texture
+							// self player
 							textureImage = warrior1ImageImage
 						}
 						if itemId == 7 {
-							//textureSprite = warrior2Texture
 							textureImage = warrior2ImageImage
 						}
 
-						// hitx is -0.5 to 0.5 of the textureSprite
-
 						texX := 0.5 - float32(hitX) // map to textureSprite width
-						//texX = texX * float32(textureSprite.Width) // map to textureSprite width
-
-						// Calculate the rectangle to draw
-						//sliceWidth := float32(textureSprite.Width) / float32(numRays)
-
-						// Source rectangle from textureSprite
-						/*srcRect := raylib.Rectangle{
-							X:      texX,
-							Y:      0,
-							Width:  sliceWidth,
-							Height: float32(textureSprite.Height),
-						}
-
-						// Destination rectangle
-						destRect := raylib.Rectangle{
-							X:      float32(ray) * (screenWidth / float32(numRays)),
-							Y:      screenHeightHalf - wallHeight/2,
-							Width:  float32(screenWidth / numRays),
-							Height: wallHeight,
-						}*/
 
 						drawSprite(pixels, textureImage, float64(texX), currentDistance, ray, false, false, false)
-						//raylib.DrawTexturePro(textureSprite, srcRect, destRect, raylib.Vector2{}, 0, raylib.White)
 					}
 				}
 			}(ray)

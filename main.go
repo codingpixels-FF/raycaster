@@ -104,7 +104,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 	rayYOrigin := rayY
 	var zbufferSlice []ZBufferItem
 
-	depth := 0.01
+	depth := depthStepHighDetail
 	dCosAngle := math.Cos(rayAngleRadians)
 	dSinAngle := math.Sin(rayAngleRadians)
 	deltaX := depth * dCosAngle
@@ -126,8 +126,20 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		mapX = int(rayX)
 		mapY = int(rayY) // needs to be recalculated in case of reflection
 
+		// level of detail of floor and ceiling based on depth
+		if totalDepth > 1 && totalDepth < 2 && depth == depthStepHighDetail {
+			depth = depthStepMediumDetail
+			deltaX = depth * dCosAngle
+			deltaY = depth * dSinAngle
+		}
+		if totalDepth > 2 && totalDepth < 3 && depth == depthStepMediumDetail {
+			depth = depthStepLowDetail
+			deltaX = depth * dCosAngle
+			deltaY = depth * dSinAngle
+		}
 		if true {
-			// track roof and floor first
+			// Ceiling and floor
+			// Track roof and floor first
 			insideTileX := float64(rayX - math.Floor(rayX))
 			insideTileY := float64(rayY + deltaY - math.Floor(rayY+deltaY)) // adjust Y for future movement
 			newZBufferItem := ZBufferItem{totalDepth, insideTileX, insideTileY, true, 0}
@@ -218,11 +230,14 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 }
 
 const (
-	screenWidth      = 1980
-	screenHeight     = 1080
-	screenHeightHalf = screenHeight / 2
-	statusBarHeight  = screenHeight / 5
-	numRays          = screenWidth
+	screenWidth           = 1980
+	screenHeight          = 1080
+	screenHeightHalf      = screenHeight / 2
+	statusBarHeight       = screenHeight / 5
+	numRays               = screenWidth
+	depthStepLowDetail    = 0.01
+	depthStepMediumDetail = 0.005
+	depthStepHighDetail   = 0.002
 )
 
 // Player properties

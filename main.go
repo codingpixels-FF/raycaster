@@ -234,10 +234,12 @@ const (
 	screenHeight          = 1080
 	screenHeightHalf      = screenHeight / 2
 	statusBarHeight       = screenHeight / 5
-	numRays               = screenWidth
+	renderWidth           = screenWidth / 4
+	renderHeight          = screenHeight / 2
+	renderHeightHalf      = renderHeight / 2
 	depthStepLowDetail    = 0.01
-	depthStepMediumDetail = 0.005
-	depthStepHighDetail   = 0.002
+	depthStepMediumDetail = 0.007
+	depthStepHighDetail   = 0.005
 )
 
 // Player properties
@@ -260,31 +262,31 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	fillColorCeilingUint32 := a>>8<<24 | r/4>>8<<16 | g/4>>8<<8 | b/4>>8
 	fillColorFloorUint32 := a>>8<<24 | r/2>>8<<16 | g/2>>8<<8 | b/2>>8
 
-	floorStartY := screenHeightHalf + wallHeightHalfLast
-	floorEndY := screenHeightHalf + wallHeightHalfCurrent
-	ceilingStartY := screenHeightHalf - wallHeightHalfCurrent
-	ceilingEndY := screenHeightHalf - wallHeightHalfLast
+	floorStartY := renderHeightHalf + wallHeightHalfLast
+	floorEndY := renderHeightHalf + wallHeightHalfCurrent
+	ceilingStartY := renderHeightHalf - wallHeightHalfCurrent
+	ceilingEndY := renderHeightHalf - wallHeightHalfLast
 
 	for y := floorStartY; y < floorEndY; y++ {
-		/*if floorStartY < screenHeightHalf {
-			floorStartY = screenHeightHalf
+		/*if floorStartY < renderHeightHalf {
+			floorStartY = renderHeightHalf
 		}
-		if floorEndY < screenHeightHalf {
-			floorEndY = screenHeightHalf
+		if floorEndY < renderHeightHalf {
+			floorEndY = renderHeightHalf
 		}
-		if floorStartY > screenHeight {
-			floorStartY = screenHeight
+		if floorStartY > renderHeight {
+			floorStartY = renderHeight
 		}
-		if floorEndY > screenHeight {
-			floorEndY = screenHeight
+		if floorEndY > renderHeight {
+			floorEndY = renderHeight
 		}*/
-		if y <= screenHeightHalf {
+		if y <= renderHeightHalf {
 			continue // too far, error
 		}
-		if y >= screenHeight {
+		if y >= renderHeight {
 			break // too close to the camera
 		}
-		bufferImage[rayX+numRays*y] = fillColorFloorUint32
+		bufferImage[rayX+renderWidth*y] = fillColorFloorUint32
 	}
 
 	for y := ceilingStartY; y < ceilingEndY; y++ {
@@ -294,19 +296,19 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 		if ceilingEndY < 0 {
 			ceilingEndY = 0
 		}
-		if ceilingStartY > screenHeightHalf {
-			ceilingStartY = screenHeightHalf
+		if ceilingStartY > renderHeightHalf {
+			ceilingStartY = renderHeightHalf
 		}
-		if ceilingEndY > screenHeightHalf {
-			ceilingEndY = screenHeightHalf
+		if ceilingEndY > renderHeightHalf {
+			ceilingEndY = renderHeightHalf
 		}*/
-		if y >= screenHeightHalf {
+		if y >= renderHeightHalf {
 			continue // too far, error
 		}
 		if y < 0 {
 			break // too close to the camera
 		}
-		bufferImage[rayX+numRays*y] = fillColorCeilingUint32
+		bufferImage[rayX+renderWidth*y] = fillColorCeilingUint32
 	}
 }
 
@@ -318,10 +320,10 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 	// get color of the texture
 	hitXonTexture := hitX * float64(textureImageImageWidth)
 
-	wallHeightCurrent := float32(screenHeight / (currentDistance + 0.0001))
+	wallHeightCurrent := float32(renderHeight / (currentDistance + 0.0001))
 
-	spriteStartY := int(screenHeightHalf - wallHeightCurrent/2)
-	spriteEndY := int(screenHeightHalf + wallHeightCurrent/2)
+	spriteStartY := int(renderHeightHalf - wallHeightCurrent/2)
+	spriteEndY := int(renderHeightHalf + wallHeightCurrent/2)
 	texCorY := 0
 
 	texSizeY := float64(spriteEndY - spriteStartY)
@@ -334,7 +336,7 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 		if y < 0 {
 			continue // Top part of the sprite is exceeding camera view
 		}
-		if y >= screenHeight {
+		if y >= renderHeight {
 			break // Lower part of the sprite is exceeding camera view, we are done
 		}
 
@@ -347,22 +349,22 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 		if isWall {
 
 			if isHitOnX {
-				bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+				bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
 			} else {
-				bufferImage[rayX+numRays*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+				bufferImage[rayX+renderWidth*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
 			}
 
 		} else {
 			if a > 240 { // simple transparency
 				if isMirror {
 					if isHitOnX {
-						bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+						bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
 					} else {
-						bufferImage[rayX+numRays*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+						bufferImage[rayX+renderWidth*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
 					}
 				} else {
 					// 2D sprite
-					bufferImage[rayX+numRays*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
+					bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
 				}
 			}
 		}
@@ -424,9 +426,9 @@ func main() {
 	// Camera settings
 	fov := math.Pi / 2.0 // 90 degrees
 
-	raylib.SetTargetFPS(60)
-	pixelBuffer1 := make([]uint32, numRays*screenHeight)
-	pixelBuffer2 := make([]uint32, numRays*screenHeight)
+	raylib.SetTargetFPS(20)
+	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
+	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
 
 	// render
@@ -434,10 +436,24 @@ func main() {
 
 	img := raylib.Image{
 		Data:    dataPtr,
-		Width:   screenWidth,
-		Height:  screenHeight,
+		Width:   renderWidth,
+		Height:  renderHeight,
 		Mipmaps: 1,
 		Format:  raylib.UncompressedR8g8b8a8,
+	}
+
+	finalRenderRectagle := raylib.Rectangle{
+		X:      0,
+		Y:      0,
+		Width:  screenWidth,
+		Height: screenHeight,
+	}
+
+	textureRectangle := raylib.Rectangle{
+		X:      0,
+		Y:      0,
+		Width:  renderWidth,
+		Height: renderHeight,
 	}
 
 	for !raylib.WindowShouldClose() {
@@ -493,12 +509,12 @@ func main() {
 			player.y += 0.1 * math.Sin(player.angle+math.Pi/2)
 		}
 
-		for ray := 0; ray < numRays; ray++ {
+		for ray := 0; ray < renderWidth; ray++ {
 			wg.Add(1)
 			go func(ray int) {
 				defer wg.Done()
 
-				rayAngleRad := (float64(ray)/float64(numRays)-0.5)*fov + player.angle // ray angles in Rad
+				rayAngleRad := (float64(ray)/float64(renderWidth)-0.5)*fov + player.angle // ray angles in Rad
 				zbufferSlice := castRay(player.x, player.y, rayAngleRad)
 
 				lastDistance := float64(-1)
@@ -524,8 +540,8 @@ func main() {
 						}
 
 						// Check if there is at least one pixel difference
-						wallHeightHalfCurrent := int(float32(screenHeight/(currentDistance+0.0001)) / 2)
-						wallHeightHalfLast := int(float32(screenHeight/(lastDistance+0.0001)) / 2)
+						wallHeightHalfCurrent := int(float32(renderHeight/(currentDistance+0.0001)) / 2)
+						wallHeightHalfLast := int(float32(renderHeight/(lastDistance+0.0001)) / 2)
 
 						if wallHeightHalfCurrent != wallHeightHalfLast {
 							lastDistance = currentDistance
@@ -589,8 +605,8 @@ func main() {
 		dataPtr = unsafe.Pointer(&(*currentPixelBuffer)[0])
 		img = raylib.Image{
 			Data:    dataPtr,
-			Width:   screenWidth,
-			Height:  screenHeight,
+			Width:   renderWidth,
+			Height:  renderHeight,
 			Mipmaps: 1,
 			Format:  raylib.UncompressedR8g8b8a8,
 		}
@@ -600,7 +616,7 @@ func main() {
 
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.NewColor(0, 0, 0, 255))
-		raylib.DrawTexture(imageBufferTexture, 0, 0, raylib.White)
+		raylib.DrawTexturePro(imageBufferTexture, textureRectangle, finalRenderRectagle, raylib.Vector2{}, 0, raylib.White)
 
 		// status bar overlay
 		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))

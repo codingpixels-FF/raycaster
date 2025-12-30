@@ -19,11 +19,12 @@ var (
 )
 
 type ZBufferItem struct {
-	Dist     float64
-	HitX     float64
-	HitY     float64
-	IsHitOnX bool
-	ItemID   int
+	Dist                 float64
+	HitX                 float64
+	HitY                 float64
+	IsHitOnX             bool
+	ItemID               int
+	NumberOfMirrorsInWay int
 }
 
 func loadMap(filename string) {
@@ -115,6 +116,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 	totalDepth := depth
 	isSelfNotAddedInThisReflection := false // ignore first pass, you are not able to see self without a mirror
 	isCurrentObjectServedInThisTile := false
+	NumberOfMirrorsInWay := 0
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
 		if totalDepth > 50 {
@@ -142,13 +144,13 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 			// Track roof and floor first
 			insideTileX := float64(rayX - math.Floor(rayX))
 			insideTileY := float64(rayY + deltaY - math.Floor(rayY+deltaY)) // adjust Y for future movement
-			newZBufferItem := ZBufferItem{totalDepth, insideTileX, insideTileY, true, 0}
+			newZBufferItem := ZBufferItem{totalDepth, insideTileX, insideTileY, true, 0, NumberOfMirrorsInWay}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 		}
 
 		// Check for collision on X
 		if mapData[mapY][mapX] == 1 {
-			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, true, 1}
+			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, true, 1, NumberOfMirrorsInWay}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			return zbufferSlice
 		}
@@ -156,7 +158,8 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		if mapData[mapY][mapX] == 2 {
 			rayY += deltaY // correct the ray
 			deltaX = -deltaX
-			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, true, 2}
+			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, true, 2, NumberOfMirrorsInWay}
+			NumberOfMirrorsInWay += 1
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			rayX += deltaX
 			rayY += deltaY
@@ -174,7 +177,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 			isCurrentObjectServedInThisTile = false
 		}
 		if mapData[mapY][mapX] == 1 {
-			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 1}
+			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 1, NumberOfMirrorsInWay}
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			return zbufferSlice
 		}
@@ -183,7 +186,8 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		if mapData[mapY][mapX] == 2 { //up down
 			deltaY = -deltaY
 			dSinAngle = -dSinAngle // sin 180 is 1/2 period
-			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 2}
+			newZBufferItem := ZBufferItem{totalDepth, rayX, rayY, false, 2, NumberOfMirrorsInWay}
+			NumberOfMirrorsInWay += 1
 			zbufferSlice = append(zbufferSlice, newZBufferItem)
 			rayX += deltaX
 			rayY += deltaY
@@ -198,7 +202,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 				// Save player's sprite if present
 				textureDistance := getDistanceOfPointOnLineByAngle(rayXOrigin, rayYOrigin, dCosAngle, dSinAngle, rayX, rayY)
 				if textureDistance < 0.5 && textureDistance > -0.5 {
-					newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, 9} // player
+					newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, 9, NumberOfMirrorsInWay} // player
 					zbufferSlice = append(zbufferSlice, newZBufferItem)
 					isSelfNotAddedInThisReflection = false
 				}
@@ -215,13 +219,13 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 
 			if textureDistance < 0.5 && textureDistance > -0.5 {
 				// Other objects sprites
-				newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, mapObjectId} // NPC
+				newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, mapObjectId, NumberOfMirrorsInWay} // NPC
 				zbufferSlice = append(zbufferSlice, newZBufferItem)
 				isCurrentObjectServedInThisTile = true
 			}
 		}
 	}
-	newZBufferItem := ZBufferItem{5, 0, 0, false, 1} // default wall
+	newZBufferItem := ZBufferItem{5, 0, 0, false, 1, NumberOfMirrorsInWay} // default wall
 	zbufferSlice = append(zbufferSlice, newZBufferItem)
 	return zbufferSlice
 }
@@ -245,7 +249,7 @@ type Player struct {
 	angle float64 // direction angle
 }
 
-func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hitX float64, hitY float64, wallHeightHalfLast int, wallHeightHalfCurrent int, rayX int) {
+func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hitX float64, hitY float64, wallHeightHalfLast int, wallHeightHalfCurrent int, rayX int, numberOfMirrorsInWay int) {
 	// hitX is from 0-1
 	// hitY is from 0-1
 	textureImageImageWidth := 256
@@ -255,6 +259,11 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	hitYonTexture := hitY * float64(textureImageImageHeight)
 	fillColor := textureImageImage.At(int(hitXonTexture), int(hitYonTexture))
 	r, g, b, a := fillColor.RGBA()
+	for _ = range numberOfMirrorsInWay {
+		r = uint32(0.7 * float32(r))
+		g = uint32(0.7 * float32(g))
+		b = uint32(1.1 * float32(b))
+	}
 	//fillColorUint32 := a>>8<<24 | r>>8<<16 | g>>8<<8 | b>>8
 	fillColorCeilingUint32 := a>>8<<24 | r/4>>8<<16 | g/4>>8<<8 | b/4>>8
 	fillColorFloorUint32 := a>>8<<24 | r/2>>8<<16 | g/2>>8<<8 | b/2>>8
@@ -309,7 +318,7 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	}
 }
 
-func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float64, currentDistance float64, rayX int, isMirror bool, isWall bool, isHitOnX bool) {
+func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float64, currentDistance float64, rayX int, isMirror bool, isWall bool, isHitOnX bool, numberOfMirrorsInWay int) {
 	// hitX is from 0-1
 	// hitY is from 0-1
 	textureImageImageWidth := 256
@@ -342,7 +351,11 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 		// Extract fill color and alpha
 		fillColor := textureImageImage.At(int(hitXonTexture), int(hitYonTexture))
 		r, g, b, a := fillColor.RGBA()
-
+		for _ = range numberOfMirrorsInWay {
+			r = uint32(0.7 * float32(r))
+			g = uint32(0.7 * float32(g))
+			b = uint32(1.1 * float32(b))
+		}
 		if isWall {
 
 			if isHitOnX {
@@ -352,7 +365,7 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 			}
 
 		} else {
-			if a > 240 { // simple transparency
+			if a == 0xffff { // simple transparency
 				if isMirror {
 					if isHitOnX {
 						bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
@@ -523,6 +536,7 @@ func main() {
 					hitX := zbufferItem.HitX
 					hitY := zbufferItem.HitY
 					isHitOnX := zbufferItem.IsHitOnX
+					numberOfMirrorsInWay := zbufferItem.NumberOfMirrorsInWay
 					// Calculate the angle difference
 					angleDiff := rayAngleRad - player.angle
 
@@ -542,7 +556,7 @@ func main() {
 
 						if wallHeightHalfCurrent != wallHeightHalfLast {
 							lastDistance = currentDistance
-							drawFloorAndCeiling(*currentPixelBuffer, wallImageImage, hitX, hitY, wallHeightHalfLast, wallHeightHalfCurrent, ray)
+							drawFloorAndCeiling(*currentPixelBuffer, wallImageImage, hitX, hitY, wallHeightHalfLast, wallHeightHalfCurrent, ray, numberOfMirrorsInWay)
 						}
 
 					} else if itemId >= 1 && itemId <= 2 {
@@ -570,7 +584,7 @@ func main() {
 							isWall = false
 						}
 
-						drawSprite(*currentPixelBuffer, imageOnWall, float64(texX), currentDistance, ray, isMirror, isWall, isHitOnX)
+						drawSprite(*currentPixelBuffer, imageOnWall, float64(texX), currentDistance, ray, isMirror, isWall, isHitOnX, numberOfMirrorsInWay)
 
 					} else {
 						// sprites
@@ -589,7 +603,7 @@ func main() {
 
 						texX := 0.5 - float32(hitX) // map to textureSprite width
 
-						drawSprite(*currentPixelBuffer, textureImage, float64(texX), currentDistance, ray, false, false, false)
+						drawSprite(*currentPixelBuffer, textureImage, float64(texX), currentDistance, ray, false, false, false, numberOfMirrorsInWay)
 					}
 				}
 			}(ray)

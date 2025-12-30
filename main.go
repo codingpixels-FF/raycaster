@@ -117,12 +117,12 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 	isCurrentObjectServedInThisTile := false
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
-		if totalDepth > 150 {
+		if totalDepth > 50 {
 			return zbufferSlice
 		}
 		rayX += deltaX
-		lastMaxX := mapX
-		lastMaxY := mapY
+		lastMapX := mapX
+		lastMapY := mapY
 		mapX = int(rayX)
 		mapY = int(rayY) // needs to be recalculated in case of reflection
 
@@ -170,7 +170,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 		rayY += deltaY
 		// check for collision on both (and assume it was Y)
 		mapY = int(rayY)
-		if lastMaxX != mapX || lastMaxY != mapY { // only one object at one tile
+		if lastMapX != mapX || lastMapY != mapY { // only one object at one tile
 			isCurrentObjectServedInThisTile = false
 		}
 		if mapData[mapY][mapX] == 1 {
@@ -190,37 +190,34 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 			isSelfNotAddedInThisReflection = true
 			continue
 		}
-		lenFromSelf := 100.0
+
+		// Handle player reflection
 		if totalDepth > 0.6 && isSelfNotAddedInThisReflection {
-			lenFromSelf = getRadius(rayXOrigin, rayYOrigin, rayX, rayY)
+			lenFromSelf := getRadius(rayXOrigin, rayYOrigin, rayX, rayY)
+			if lenFromSelf < 0.5 {
+				// Save player's sprite if present
+				textureDistance := getDistanceOfPointOnLineByAngle(rayXOrigin, rayYOrigin, dCosAngle, dSinAngle, rayX, rayY)
+				if textureDistance < 0.5 && textureDistance > -0.5 {
+					newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, 9} // player
+					zbufferSlice = append(zbufferSlice, newZBufferItem)
+					isSelfNotAddedInThisReflection = false
+				}
+			}
 		}
 		mapObjectId := mapData[mapY][mapX]
-		// check of other objects on the map
-		if (mapObjectId > 2 && mapObjectId < 9 && isCurrentObjectServedInThisTile == false) || lenFromSelf <= 0.5 { // 9 is player
-			// only execute if we are in the radius of the root of the squere
-			var mapSquareCenterX float64
-			var mapSquareCenterY float64
-			if mapObjectId > 2 && mapObjectId < 9 {
-				mapSquareCenterX = float64(mapX) + 0.5
-				mapSquareCenterY = float64(mapY) + 0.5
-			} else if lenFromSelf < 0.5 {
-				mapSquareCenterX = rayXOrigin
-				mapSquareCenterY = rayYOrigin
-			}
+		// Check of other objects (sprites) on the map
+		if mapObjectId > 2 && mapObjectId < 9 && isCurrentObjectServedInThisTile == false { // 9 is player
+			// Only execute if we are in the radius of the root of the square
+			mapSquareCenterX := float64(mapX) + 0.5
+			mapSquareCenterY := float64(mapY) + 0.5
 
 			textureDistance := getDistanceOfPointOnLineByAngle(mapSquareCenterX, mapSquareCenterY, dCosAngle, dSinAngle, rayX, rayY)
 
 			if textureDistance < 0.5 && textureDistance > -0.5 {
-				if lenFromSelf <= 0.5 {
-					newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, 9} // player
-					zbufferSlice = append(zbufferSlice, newZBufferItem)
-					isSelfNotAddedInThisReflection = false
-					lenFromSelf = 100.0
-				} else {
-					newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, mapObjectId} // npc
-					zbufferSlice = append(zbufferSlice, newZBufferItem)
-					isCurrentObjectServedInThisTile = true
-				}
+				// Other objects sprites
+				newZBufferItem := ZBufferItem{totalDepth, textureDistance, 0, false, mapObjectId} // NPC
+				zbufferSlice = append(zbufferSlice, newZBufferItem)
+				isCurrentObjectServedInThisTile = true
 			}
 		}
 	}

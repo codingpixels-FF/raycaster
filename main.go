@@ -495,6 +495,16 @@ func main() {
 		player.angle += deltaX * 0.01
 
 		// Keyboard
+		// Turn left
+		if raylib.IsKeyDown(raylib.KeyLeft) || raylib.IsKeyDown(raylib.KeyQ) {
+			player.angle -= 0.05
+		}
+
+		// Turn right
+		if raylib.IsKeyDown(raylib.KeyRight) || raylib.IsKeyDown(raylib.KeyE) {
+			player.angle += 0.05
+		}
+
 		// Forward
 		if raylib.IsKeyDown(raylib.KeyW) {
 			player.x += 0.1 * math.Cos(player.angle)

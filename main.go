@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"math/rand"
 	"os"
 	_ "strconv"
 	"sync"
@@ -119,7 +120,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 	NumberOfMirrorsInWay := 0
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
-		if totalDepth > 50 {
+		if totalDepth > 30 {
 			return zbufferSlice
 		}
 		rayX += deltaX
@@ -249,7 +250,7 @@ type Player struct {
 	angle float64 // direction angle
 }
 
-func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hitX float64, hitY float64, wallHeightHalfLast int, wallHeightHalfCurrent int, rayX int, numberOfMirrorsInWay int) {
+func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hitX float64, hitY float64, wallHeightHalfLast int, wallHeightHalfCurrent int, rayX int, numberOfMirrorsInWay int, currentDistance float64) {
 	// hitX is from 0-1
 	// hitY is from 0-1
 	textureImageImageWidth := 256
@@ -259,14 +260,30 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	hitYonTexture := hitY * float64(textureImageImageHeight)
 	fillColor := textureImageImage.At(int(hitXonTexture), int(hitYonTexture))
 	r, g, b, a := fillColor.RGBA()
+	// Calculate scaling factor based on distance
+	randomValue := rand.Float64() + 0.5
+	scale := 1.0 / (1.0 + randomValue*currentDistance/5)
+	r = uint32(scale * (float64(r)))
+	g = uint32(scale * (float64(g)))
+	b = uint32(scale * (float64(b)))
+
 	for _ = range numberOfMirrorsInWay {
 		r = uint32(0.7 * float32(r))
 		g = uint32(0.7 * float32(g))
-		b = uint32(1.1 * float32(b))
+		b = uint32(0.7 * float32(b))
 	}
-	//fillColorUint32 := a>>8<<24 | r>>8<<16 | g>>8<<8 | b>>8
-	fillColorCeilingUint32 := a>>8<<24 | r/4>>8<<16 | g/4>>8<<8 | b/4>>8
-	fillColorFloorUint32 := a>>8<<24 | r/2>>8<<16 | g/2>>8<<8 | b/2>>8
+	if currentDistance < 1 {
+		b = uint32(float64(b) * 1.2)
+	}
+	if currentDistance < 1.5 {
+		b = uint32(float64(b) * 1.2)
+	}
+	if currentDistance < 2 {
+		b = uint32(float64(b) * 1.2)
+	}
+	//fillColorUint32 := a>>8<<24 | r>>8<<16 | g>>8<<8 | b>>8 bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
+	fillColorCeilingUint32 := a>>8<<24 | b/4>>8<<16 | g/4>>8<<8 | r/4>>8
+	fillColorFloorUint32 := a>>8<<24 | b/2>>8<<16 | g/2>>8<<8 | r/2>>8
 
 	floorStartY := renderHeightHalf + wallHeightHalfLast
 	floorEndY := renderHeightHalf + wallHeightHalfCurrent
@@ -351,10 +368,26 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 		// Extract fill color and alpha
 		fillColor := textureImageImage.At(int(hitXonTexture), int(hitYonTexture))
 		r, g, b, a := fillColor.RGBA()
+		// Calculate scaling factor based on distance
+		randomValue := rand.Float64() + 0.5
+		scale := 1.0 / (1.0 + randomValue*currentDistance/5)
+		r = uint32(scale * (float64(r)))
+		g = uint32(scale * (float64(g)))
+		b = uint32(scale * (float64(b)))
+
 		for _ = range numberOfMirrorsInWay {
 			r = uint32(0.7 * float32(r))
 			g = uint32(0.7 * float32(g))
-			b = uint32(1.1 * float32(b))
+			b = uint32(0.7 * float32(b))
+		}
+		if currentDistance < 1 {
+			b = uint32(float64(b) * 1.2)
+		}
+		if currentDistance < 1.5 {
+			b = uint32(float64(b) * 1.2)
+		}
+		if currentDistance < 2 {
+			b = uint32(float64(b) * 1.2)
 		}
 		if isWall {
 
@@ -403,12 +436,19 @@ func main() {
 	defer raylib.UnloadImage(wizardImage)
 	wizardImageImage := wizardImage.ToImage()
 
-	warrior1Texture := raylib.LoadTexture("256_warrior1.png")
-	defer raylib.UnloadTexture(warrior1Texture)
-	warrior1Image := raylib.LoadImageFromTexture(warrior1Texture)  // Loaded in CPU memory (RAM)
-	raylib.ImageFormat(warrior1Image, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
-	defer raylib.UnloadImage(warrior1Image)
-	warrior1ImageImage := warrior1Image.ToImage()
+	playerFrontTexture := raylib.LoadTexture("256_sorcerer1.png")
+	defer raylib.UnloadTexture(playerFrontTexture)
+	playerFrontImage := raylib.LoadImageFromTexture(playerFrontTexture) // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(playerFrontImage, raylib.UncompressedR8g8b8a8)   // Format image to RGBA 32bit (required for texture update)
+	defer raylib.UnloadImage(playerFrontImage)
+	playerFrontImageImage := playerFrontImage.ToImage()
+
+	playerHandsTexture := raylib.LoadTexture("256_sorcerer1_hand.png")
+	defer raylib.UnloadTexture(playerHandsTexture)
+	//playerHandsImage := raylib.LoadImageFromTexture(playerHandsTexture) // Loaded in CPU memory (RAM)
+	//raylib.ImageFormat(playerHandsImage, raylib.UncompressedR8g8b8a8)   // Format image to RGBA 32bit (required for texture update)
+	//defer raylib.UnloadImage(playerHandsImage)
+	//playerHandsImageImage := playerHandsImage.ToImage()
 
 	mirrorTexture := raylib.LoadTexture("256_mirror.png")
 	defer raylib.UnloadTexture(mirrorTexture)
@@ -424,13 +464,20 @@ func main() {
 	defer raylib.UnloadImage(warrior2Image)
 	warrior2ImageImage := warrior2Image.ToImage()
 
+	warrior1Texture := raylib.LoadTexture("256_warrior1.png")
+	defer raylib.UnloadTexture(warrior1Texture)
+	warrior1Image := raylib.LoadImageFromTexture(warrior1Texture)  // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(warrior1Image, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
+	defer raylib.UnloadImage(warrior1Image)
+	warrior1ImageImage := warrior1Image.ToImage()
+
 	loadMap("map.txt")
 
 	// Player
 	player := Player{
-		x:     3.0,
-		y:     3.0,
-		angle: 0, // looking straight ahead
+		x:     15.5,
+		y:     1.5,
+		angle: math.Pi / 2, // looking straight ahead
 	}
 
 	// Camera settings
@@ -464,6 +511,20 @@ func main() {
 		Y:      0,
 		Width:  renderWidth,
 		Height: renderHeight,
+	}
+
+	playerHandRanderRectagle := raylib.Rectangle{
+		X:      screenWidth / 2,
+		Y:      0,
+		Width:  screenWidth / 2,
+		Height: screenHeight,
+	}
+
+	playerHandstextureRectangle := raylib.Rectangle{
+		X:      0,
+		Y:      0,
+		Width:  256,
+		Height: 256,
 	}
 
 	for !raylib.WindowShouldClose() {
@@ -566,7 +627,7 @@ func main() {
 
 						if wallHeightHalfCurrent != wallHeightHalfLast {
 							lastDistance = currentDistance
-							drawFloorAndCeiling(*currentPixelBuffer, wallImageImage, hitX, hitY, wallHeightHalfLast, wallHeightHalfCurrent, ray, numberOfMirrorsInWay)
+							drawFloorAndCeiling(*currentPixelBuffer, wallImageImage, hitX, hitY, wallHeightHalfLast, wallHeightHalfCurrent, ray, numberOfMirrorsInWay, currentDistance)
 						}
 
 					} else if itemId >= 1 && itemId <= 2 {
@@ -600,14 +661,14 @@ func main() {
 						// sprites
 
 						var textureImage image.Image
-						if itemId == 8 {
-							textureImage = wizardImageImage
-						}
-						if itemId == 9 {
-							// self player
+						if itemId == 6 {
 							textureImage = warrior1ImageImage
-						}
-						if itemId == 7 {
+						} else if itemId == 8 {
+							textureImage = wizardImageImage
+						} else if itemId == 9 {
+							// self player
+							textureImage = playerFrontImageImage
+						} else if itemId == 7 {
 							textureImage = warrior2ImageImage
 						}
 
@@ -638,6 +699,8 @@ func main() {
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.NewColor(0, 0, 0, 255))
 		raylib.DrawTexturePro(imageBufferTexture, textureRectangle, finalRenderRectagle, raylib.Vector2{}, 0, raylib.White)
+
+		raylib.DrawTexturePro(playerHandsTexture, playerHandstextureRectangle, playerHandRanderRectagle, raylib.Vector2{}, 0, raylib.White)
 
 		// status bar overlay
 		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))

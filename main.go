@@ -261,26 +261,8 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	fillColor := textureImageImage.At(int(hitXonTexture), int(hitYonTexture))
 	r, g, b, a := fillColor.RGBA()
 	// Calculate scaling factor based on distance
-	randomValue := rand.Float64() + 0.5
-	scale := 1.0 / (1.0 + randomValue*currentDistance/5)
-	r = uint32(scale * (float64(r)))
-	g = uint32(scale * (float64(g)))
-	b = uint32(scale * (float64(b)))
-
-	for _ = range numberOfMirrorsInWay {
-		r = uint32(0.7 * float32(r))
-		g = uint32(0.7 * float32(g))
-		b = uint32(0.7 * float32(b))
-	}
-	if currentDistance < 1 {
-		b = uint32(float64(b) * 1.2)
-	}
-	if currentDistance < 1.5 {
-		b = uint32(float64(b) * 1.2)
-	}
-	if currentDistance < 2 {
-		b = uint32(float64(b) * 1.2)
-	}
+	// Calculate scaling factor based on distance
+	r, g, b = addPixelEffects(currentDistance, r, g, b, numberOfMirrorsInWay)
 	//fillColorUint32 := a>>8<<24 | r>>8<<16 | g>>8<<8 | b>>8 bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
 	fillColorCeilingUint32 := a>>8<<24 | b/4>>8<<16 | g/4>>8<<8 | r/4>>8
 	fillColorFloorUint32 := a>>8<<24 | b/2>>8<<16 | g/2>>8<<8 | r/2>>8
@@ -369,32 +351,13 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 		fillColor := textureImageImage.At(int(hitXonTexture), int(hitYonTexture))
 		r, g, b, a := fillColor.RGBA()
 		// Calculate scaling factor based on distance
-		randomValue := rand.Float64() + 0.5
-		scale := 1.0 / (1.0 + randomValue*currentDistance/5)
-		r = uint32(scale * (float64(r)))
-		g = uint32(scale * (float64(g)))
-		b = uint32(scale * (float64(b)))
-
-		for _ = range numberOfMirrorsInWay {
-			r = uint32(0.7 * float32(r))
-			g = uint32(0.7 * float32(g))
-			b = uint32(0.7 * float32(b))
-		}
-		if currentDistance < 1 {
-			b = uint32(float64(b) * 1.2)
-		}
-		if currentDistance < 1.5 {
-			b = uint32(float64(b) * 1.2)
-		}
-		if currentDistance < 2 {
-			b = uint32(float64(b) * 1.2)
-		}
+		r, g, b = addPixelEffects(currentDistance, r, g, b, numberOfMirrorsInWay)
 		if isWall {
 
 			if isHitOnX {
 				bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
 			} else {
-				bufferImage[rayX+renderWidth*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+				bufferImage[rayX+renderWidth*y] = a>>8<<24 | b/4*3>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
 			}
 
 		} else {
@@ -412,6 +375,30 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 			}
 		}
 	}
+}
+
+func addPixelEffects(currentDistance float64, r uint32, g uint32, b uint32, numberOfMirrorsInWay int) (uint32, uint32, uint32) {
+	randomValue := rand.Float64() + 0.5
+	scale := 1.0 / (1.0 + randomValue*currentDistance/5)
+	r = uint32(scale * (float64(r)))
+	g = uint32(scale * (float64(g)))
+	b = uint32(scale * (float64(b)))
+
+	for _ = range numberOfMirrorsInWay {
+		r = uint32(0.7 * float32(r))
+		g = uint32(0.7 * float32(g))
+		b = uint32(0.7 * float32(b))
+	}
+	if currentDistance < 2*randomValue {
+		b = uint32(float64(b) * 1.2)
+	}
+	if currentDistance < 2.5*randomValue {
+		b = uint32(float64(b) * 1.2)
+	}
+	if currentDistance < 3*randomValue {
+		b = uint32(float64(b) * 1.2)
+	}
+	return r, g, b
 }
 
 func main() {
@@ -565,29 +552,34 @@ func main() {
 		if raylib.IsKeyDown(raylib.KeyRight) || raylib.IsKeyDown(raylib.KeyE) {
 			player.angle += 0.05
 		}
+		factor := 0.1
+
+		if raylib.IsKeyDown(raylib.KeyLeftShift) {
+			factor = 0.5
+		}
 
 		// Forward
 		if raylib.IsKeyDown(raylib.KeyW) {
-			player.x += 0.1 * math.Cos(player.angle)
-			player.y += 0.1 * math.Sin(player.angle)
+			player.x += factor * math.Cos(player.angle)
+			player.y += factor * math.Sin(player.angle)
 		}
 
 		// Backward
 		if raylib.IsKeyDown(raylib.KeyS) {
-			player.x -= 0.1 * math.Cos(player.angle)
-			player.y -= 0.1 * math.Sin(player.angle)
+			player.x -= factor * math.Cos(player.angle)
+			player.y -= factor * math.Sin(player.angle)
 		}
 
 		// Strafe left
 		if raylib.IsKeyDown(raylib.KeyA) {
-			player.x += 0.1 * math.Cos(player.angle-math.Pi/2)
-			player.y += 0.1 * math.Sin(player.angle-math.Pi/2)
+			player.x += factor * math.Cos(player.angle-math.Pi/2)
+			player.y += factor * math.Sin(player.angle-math.Pi/2)
 		}
 
 		// Strafe right
 		if raylib.IsKeyDown(raylib.KeyD) {
-			player.x += 0.1 * math.Cos(player.angle+math.Pi/2)
-			player.y += 0.1 * math.Sin(player.angle+math.Pi/2)
+			player.x += factor * math.Cos(player.angle+math.Pi/2)
+			player.y += factor * math.Sin(player.angle+math.Pi/2)
 		}
 
 		for ray := 0; ray < renderWidth; ray++ {

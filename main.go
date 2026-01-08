@@ -232,16 +232,19 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 }
 
 const (
-	screenWidth           = 1980
-	screenHeight          = 1080
-	screenHeightHalf      = screenHeight / 2
-	statusBarHeight       = screenHeight / 5
-	renderWidth           = screenWidth / 4
-	renderHeight          = screenHeight / 2
-	renderHeightHalf      = renderHeight / 2
-	depthStepLowDetail    = 0.01
+	screenWidth      = 1920
+	screenHeight     = 1080
+	screenHeightHalf = screenHeight / 2
+	statusBarHeight  = screenHeight / 5
+	renderWidth      = screenWidth / 1
+	renderHeight     = screenHeight / 1
+	renderHeightHalf = renderHeight / 2
+	/*depthStepLowDetail    = 0.01
 	depthStepMediumDetail = 0.007
-	depthStepHighDetail   = 0.005
+	depthStepHighDetail   = 0.005*/
+	depthStepLowDetail    = 0.007
+	depthStepMediumDetail = 0.005
+	depthStepHighDetail   = 0.002
 )
 
 // Player properties
@@ -458,19 +461,26 @@ func main() {
 	defer raylib.UnloadImage(warrior1Image)
 	warrior1ImageImage := warrior1Image.ToImage()
 
+	bush1Texture := raylib.LoadTexture("256_bush1.png")
+	defer raylib.UnloadTexture(bush1Texture)
+	bush1Image := raylib.LoadImageFromTexture(bush1Texture)     // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(bush1Image, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
+	defer raylib.UnloadImage(bush1Image)
+	bush1ImageImage := bush1Image.ToImage()
+
 	loadMap("map.txt")
 
 	// Player
 	player := Player{
 		x:     15.5,
-		y:     1.5,
+		y:     5.0,
 		angle: math.Pi / 2, // looking straight ahead
 	}
 
 	// Camera settings
 	fov := math.Pi / 2.0 // 90 degrees
 
-	raylib.SetTargetFPS(20)
+	raylib.SetTargetFPS(6)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
@@ -552,7 +562,7 @@ func main() {
 		if raylib.IsKeyDown(raylib.KeyRight) || raylib.IsKeyDown(raylib.KeyE) {
 			player.angle += 0.05
 		}
-		factor := 0.1
+		factor := 0.01
 
 		if raylib.IsKeyDown(raylib.KeyLeftShift) {
 			factor = 0.5
@@ -575,7 +585,9 @@ func main() {
 			player.x += factor * math.Cos(player.angle-math.Pi/2)
 			player.y += factor * math.Sin(player.angle-math.Pi/2)
 		}
-
+		player.angle -= 0.005
+		player.x += factor * math.Cos(player.angle+math.Pi/2)
+		player.y += factor * math.Sin(player.angle+math.Pi/2)
 		// Strafe right
 		if raylib.IsKeyDown(raylib.KeyD) {
 			player.x += factor * math.Cos(player.angle+math.Pi/2)
@@ -653,7 +665,9 @@ func main() {
 						// sprites
 
 						var textureImage image.Image
-						if itemId == 6 {
+						if itemId == 5 {
+							textureImage = bush1ImageImage
+						} else if itemId == 6 {
 							textureImage = warrior1ImageImage
 						} else if itemId == 8 {
 							textureImage = wizardImageImage

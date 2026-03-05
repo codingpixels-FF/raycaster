@@ -388,18 +388,18 @@ func addPixelEffects(currentDistance float64, r uint32, g uint32, b uint32, numb
 	b = uint32(scale * (float64(b)))
 
 	for _ = range numberOfMirrorsInWay {
-		r = uint32(0.7 * float32(r))
-		g = uint32(0.7 * float32(g))
-		b = uint32(0.7 * float32(b))
+		r = uint32(0.9 * float32(r))
+		g = uint32(0.9 * float32(g))
+		b = uint32(0.9 * float32(b))
 	}
 	if currentDistance < 2*randomValue {
-		b = uint32(float64(b) * 1.2)
+		b = uint32(float64(b) * 1.05)
 	}
 	if currentDistance < 2.5*randomValue {
-		b = uint32(float64(b) * 1.2)
+		b = uint32(float64(b) * 1.05)
 	}
 	if currentDistance < 3*randomValue {
-		b = uint32(float64(b) * 1.2)
+		b = uint32(float64(b) * 1.05)
 	}
 	return r, g, b
 }
@@ -472,8 +472,8 @@ func main() {
 
 	// Player
 	player := Player{
-		x:     15.5,
-		y:     5.0,
+		x:     15.45,
+		y:     5.65,
 		angle: math.Pi / 2, // looking straight ahead
 	}
 
@@ -523,7 +523,8 @@ func main() {
 		Width:  256,
 		Height: 256,
 	}
-
+	xx := 0.005
+	yy := 0.005
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup
 		// Check if we point to pixelBuffer2
@@ -563,6 +564,23 @@ func main() {
 			player.angle += 0.05
 		}
 		factor := 0.01
+		player.angle += 0.005
+		player.x += xx
+		player.y += yy
+		// x:     15.65,
+		//y:     5.65,
+		if player.x > 15.65 {
+			xx = -0.005
+		}
+		if player.y > 5.65 {
+			yy = -0.005
+		}
+		if player.x < 15.35 {
+			xx = 0.005
+		}
+		if player.y < 5.35 {
+			yy = 0.005
+		}
 
 		if raylib.IsKeyDown(raylib.KeyLeftShift) {
 			factor = 0.5
@@ -585,9 +603,7 @@ func main() {
 			player.x += factor * math.Cos(player.angle-math.Pi/2)
 			player.y += factor * math.Sin(player.angle-math.Pi/2)
 		}
-		player.angle -= 0.005
-		player.x += factor * math.Cos(player.angle+math.Pi/2)
-		player.y += factor * math.Sin(player.angle+math.Pi/2)
+
 		// Strafe right
 		if raylib.IsKeyDown(raylib.KeyD) {
 			player.x += factor * math.Cos(player.angle+math.Pi/2)

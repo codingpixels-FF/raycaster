@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"math"
 	_ "strconv"
 	"sync"
 	"unsafe"
@@ -79,6 +80,7 @@ func main() {
 		Projection: raylib.CameraPerspective,
 	}
 
+	angle := 0.0
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup
 		// Check if we point to pixelBuffer2
@@ -103,6 +105,7 @@ func main() {
 				}*/
 			}()
 		}
+
 		prefillBUfferWithImage(wallImage, wallImageImage, currentPixelBuffer)
 		// Mouse
 		deltaX := int(raylib.GetMouseX())
@@ -149,25 +152,32 @@ func main() {
 
 		currentTexture := raylib.LoadTextureFromImage(wallImage)
 
-		DrawCubeTexture(currentTexture, vec, 2.0, 4.0, 2.0, raylib.White)
-
-		// Draw cube with an applied texture, but only a defined rectangle piece of the texture
-		rec := raylib.Rectangle{
-			Y:      float32(currentTexture.Height) / 2.0,
-			Width:  float32(currentTexture.Width) / 2.0,
-			Height: float32(currentTexture.Height) / 2.0,
+		DrawCubeTexture(currentTexture, vec, 2.0, 2.0, 2.0, raylib.White)
+		vec = raylib.Vector3{
+			X: 0.0,
+			Y: 1.0,
 		}
+		DrawCubeTexture(currentTexture, vec, 2.0, 2.0, 2.0, raylib.White)
+
 		vec = raylib.Vector3{
 			X: 2.0,
 			Y: 1.0,
 		}
-		DrawCubeTextureRec(currentTexture, rec, vec, 2.0, 2.0, 2.0, raylib.White)
+		// Increase the angle (adjust speed as needed)
+		angle += 0.05
+
+		// Calculate new camera position to orbit around the target (center)
+		radius := float32(10.0)
+		camera.Position.X = float32(math.Cos(float64(angle))) * radius
+		camera.Position.Z = float32(math.Sin(float64(angle))) * radius
+		camera.Position.Y = 10.0 // Keep height constant, or change for a different effect
+
+		// Make sure to update the target if needed, or keep it fixed
+		camera.Target = raylib.Vector3{0, 0, 0}
 
 		raylib.DrawGrid(10, 1.0) // Draw a grid
 		raylib.EndMode3D()
 		raylib.DrawFPS(screenWidth-100, 10)
-		//raylib.EndDrawing()
-
 		raylib.EndDrawing()
 		raylib.UnloadTexture(imageBufferTexture)
 	}
@@ -219,14 +229,6 @@ func DrawCubeTexture(texture raylib.Texture2D, position raylib.Vector3, width, h
 	// Set desired texture to be enabled while drawing following vertex data
 	raylib.SetTexture(texture.ID)
 
-	// Vertex data transformation can be defined with the commented lines,
-	// but in this example we calculate the transformed vertex data directly when calling raylibVertex3f()
-	// raylib.PushMatrix()
-	// NOTE: Transformation is applied in inverse order (scale -> rotate -> translate)
-	//raylib.Translatef(2.0, 0.0, 0.0)
-	//raylib.Rotatef(45, 0, 1, )
-	//raylib.Scalef(2.0, 2.0, 2.0)
-
 	raylib.Begin(raylib.Quads)
 	raylib.Color4ub(color.R, color.G, color.B, color.A)
 	// Front Face
@@ -259,7 +261,8 @@ func DrawCubeTexture(texture raylib.Texture2D, position raylib.Vector3, width, h
 	raylib.Vertex3f(x+width/2, y+height/2, z+length/2) // Bottom Right Of The Texture and Quad
 	raylib.TexCoord2f(1.0, 1.0)
 	raylib.Vertex3f(x+width/2, y+height/2, z-length/2) // Top Right Of The Texture and Quad Bottom Face
-	raylib.Normal3f(0.0, -1.0, 0.0)                    // Normal Pointing Down
+
+	raylib.Normal3f(0.0, -1.0, 0.0) // Normal Pointing Down
 	raylib.TexCoord2f(1.0, 1.0)
 	raylib.Vertex3f(x-width/2, y-height/2, z-length/2) // Top Right Of The Texture and Quad
 	raylib.TexCoord2f(0.0, 1.0)
@@ -288,97 +291,6 @@ func DrawCubeTexture(texture raylib.Texture2D, position raylib.Vector3, width, h
 	raylib.Vertex3f(x-width/2, y+height/2, z+length/2) // Top Right Of The Texture and Quad
 	raylib.TexCoord2f(0.0, 1.0)
 	raylib.Vertex3f(x-width/2, y+height/2, z-length/2) // Top Left Of The Texture and Quad
-
-	raylib.End()
-	//raylib.PopMatrix()
-
-	raylib.SetTexture(0)
-}
-
-// DrawCubeTextureRec draws a cube with texture piece applied to all faces
-func DrawCubeTextureRec(texture raylib.Texture2D, source raylib.Rectangle, position raylib.Vector3, width, height,
-	length float32, color raylib.Color) {
-
-	x := position.X
-	y := position.Y
-	z := position.Z
-
-	texWidth := float32(texture.Width)
-	texHeight := float32(texture.Height)
-
-	// Set desired texture to be enabled while drawing following vertex data
-	raylib.SetTexture(texture.ID)
-
-	// We calculate the normalized texture coordinates for the desired texture-source-rectangle
-	// It means converting from (tex.width, tex.height) coordinates to [0.0f, 1.0f] equivalent
-	raylib.Begin(raylib.Quads)
-	raylib.Color4ub(color.R, color.G, color.B, color.A)
-
-	// Front face
-	raylib.Normal3f(0.0, 0.0, 1.0)
-	raylib.TexCoord2f(source.X/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x-width/2, y-height/2, z+length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x+width/2, y-height/2, z+length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x+width/2, y+height/2, z+length/2)
-	raylib.TexCoord2f(source.X/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x-width/2, y+height/2, z+length/2)
-
-	// Back face
-	raylib.Normal3f(0.0, 0.0, -1.0)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x-width/2, y-height/2, z-length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x-width/2, y+height/2, z-length/2)
-	raylib.TexCoord2f(source.X/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x+width/2, y+height/2, z-length/2)
-	raylib.TexCoord2f(source.X/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x+width/2, y-height/2, z-length/2)
-
-	// Top face
-	raylib.Normal3f(0.0, 1.0, 0.0)
-	raylib.TexCoord2f(source.X/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x-width/2, y+height/2, z-length/2)
-	raylib.TexCoord2f(source.X/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x-width/2, y+height/2, z+length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x+width/2, y+height/2, z+length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x+width/2, y+height/2, z-length/2)
-
-	// Bottom face
-	raylib.Normal3f(0.0, -1.0, 0.0)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x-width/2, y-height/2, z-length/2)
-	raylib.TexCoord2f(source.X/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x+width/2, y-height/2, z-length/2)
-	raylib.TexCoord2f(source.X/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x+width/2, y-height/2, z+length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x-width/2, y-height/2, z+length/2)
-
-	// Right face
-	raylib.Normal3f(1.0, 0.0, 0.0)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x+width/2, y-height/2, z-length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x+width/2, y+height/2, z-length/2)
-	raylib.TexCoord2f(source.X/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x+width/2, y+height/2, z+length/2)
-	raylib.TexCoord2f(source.X/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x+width/2, y-height/2, z+length/2)
-
-	// Left face
-	raylib.Normal3f(-1.0, 0.0, 0.0)
-	raylib.TexCoord2f(source.X/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x-width/2, y-height/2, z-length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, (source.Y+source.Height)/texHeight)
-	raylib.Vertex3f(x-width/2, y-height/2, z+length/2)
-	raylib.TexCoord2f((source.X+source.Width)/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x-width/2, y+height/2, z+length/2)
-	raylib.TexCoord2f(source.X/texWidth, source.Y/texHeight)
-	raylib.Vertex3f(x-width/2, y+height/2, z-length/2)
 
 	raylib.End()
 

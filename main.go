@@ -105,13 +105,14 @@ func main() {
 				}*/
 			}()
 		}
-
-		prefillBUfferWithImage(wallImage, wallImageImage, currentPixelBuffer)
+		offsetX := 20
+		offsetY := 20
+		prefillBUfferWithImage(offsetX, offsetY, wallImage, wallImageImage, currentPixelBuffer)
 		// Mouse
-		deltaX := int(raylib.GetMouseX())
-		deltaY := int(raylib.GetMouseY())
+		mouseAbsX := int(raylib.GetMouseX())
+		mouseAbsY := int(raylib.GetMouseY())
 
-		setPixelWhite(wallImage, deltaX, deltaY)
+		setPixelWhite(wallImage, mouseAbsX-offsetX, mouseAbsY-offsetY)
 		wallImageImage = wallImage.ToImage()
 
 		// Switch the image buffer
@@ -135,7 +136,7 @@ func main() {
 		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))
 		raylib.DrawRectangle(0, screenHeight+10, screenWidth, screenHeight+statusBarHeight, raylib.NewColor(0, 0, 255, 255))
 		//playerStatus := fmt.Sprintf("%.2f\n%.2f\n%.2f", player.x, player.y, player.angle)
-		playerStatus := fmt.Sprintf("%.2d\n%.2d", deltaX, deltaY)
+		playerStatus := fmt.Sprintf("%.2d\n%.2d", mouseAbsX, mouseAbsY)
 		raylib.DrawText(playerStatus, 20, screenHeight+10, 65, raylib.White)
 
 		playerStatusLegend := fmt.Sprintf("x\ny\n")
@@ -202,12 +203,12 @@ func setPixelWhite(img *raylib.Image, x, y int) {
 	dataSlice[index+3] = 255 // A
 }
 
-func prefillBUfferWithImage(wallImage *raylib.Image, wallImageImage image.Image, currentPixelBuffer *[]uint32) {
-	for rayX := 0; rayX < int(wallImage.Width); rayX++ {
-		corX := int(int32(rayX))
-		for rayY := 0; rayY < int(wallImage.Height); rayY++ {
+func prefillBUfferWithImage(offsetX int, offsetY int, wallImage *raylib.Image, wallImageImage image.Image, currentPixelBuffer *[]uint32) {
+	for rayX := offsetX; rayX < int(wallImage.Width); rayX++ {
+		corX := int(int32(rayX)) - offsetX
+		for rayY := offsetY; rayY < int(wallImage.Height); rayY++ {
 			// Extract fill color and alpha
-			fillColor := wallImageImage.At(corX, int(int32(rayY)))
+			fillColor := wallImageImage.At(corX, int(int32(rayY))-offsetY)
 			r, g, b, a := fillColor.RGBA()
 			// Calculate scaling factor based on distance
 			//r, g, b = addPixelEffects(currentDistance, r, g, b, numberOfMirrorsInWay)

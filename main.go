@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	screenWidth      = 1920 / 4
-	screenHeight     = 1080 / 4
+	screenWidth      = 1920
+	screenHeight     = 1080
 	screenPixelSize  = 4
 	screenHeightHalf = screenHeight / 2
 	statusBarHeight  = screenHeight / 2
@@ -99,6 +99,12 @@ func main() {
 		G: colorG,
 		B: colorB,
 	}
+	colorPickerNumColors := 255
+	colorPickerRectSizeX := int32(3)
+	colorPickerRectSizeY := colorPickerRectSizeX * 4
+	colorPickerColorPadding := int32(1)
+	colorPickerStartPositionX := int32(100)
+	colorPickerStartPositionY := colorPickerRectSizeX * 2
 
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup
@@ -126,10 +132,51 @@ func main() {
 		}
 
 		prefillBUfferWithImage(offsetX, offsetY, wallImage, wallImageImage, currentPixelBuffer)
+
+		//Draw color picker
+		//for raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))
+
+		// Parameters for color blocks
+
+		ii := int32(0)
+		for i := 0; i < colorPickerNumColors; i = i + 2 {
+			ii++
+			// Half-bright color
+			newColor := raylib.NewColor(uint8(i), uint8(pixelColor.G), uint8(pixelColor.B), 255)
+			raylib.DrawRectangle(
+				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
+				colorPickerStartPositionY+colorPickerRectSizeY*1+colorPickerColorPadding,
+				colorPickerRectSizeX,
+				colorPickerRectSizeY,
+				newColor,
+			)
+
+			// Half-bright color
+			newColor = raylib.NewColor(uint8(pixelColor.R), uint8(i), uint8(pixelColor.B), 255)
+			raylib.DrawRectangle(
+				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
+				colorPickerStartPositionY+colorPickerRectSizeY*2+colorPickerColorPadding,
+				colorPickerRectSizeX,
+				colorPickerRectSizeY,
+				newColor,
+			)
+
+			// Half-bright color
+			newColor = raylib.NewColor(uint8(pixelColor.R), uint8(pixelColor.G), uint8(i), 255)
+			raylib.DrawRectangle(
+				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
+				colorPickerStartPositionY+colorPickerRectSizeY*3+colorPickerColorPadding,
+				colorPickerRectSizeX,
+				colorPickerRectSizeY,
+				newColor,
+			)
+		}
+
 		// Mouse
 		mouseAbsX := int(raylib.GetMouseX())
 		mouseAbsY := int(raylib.GetMouseY())
 		mouseButton1Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonLeft)
+		mouseButton2Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonRight)
 		if mouseButton1Pressed {
 			if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
 				setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, pixelColor)
@@ -138,21 +185,29 @@ func main() {
 			//setPixelWhite(wallImage, mouseAbsX-offsetX, mouseAbsY-offsetY)
 			lastMouseAbsX = mouseAbsX
 			lastMouseAbsY = mouseAbsY
-			if mouseAbsX > 100 && mouseAbsX < 355 {
-				if mouseAbsY > 0 && mouseAbsY < 10 {
-					colorR = mouseAbsX - 100
+			if int32(mouseAbsX) > colorPickerStartPositionX && int32(mouseAbsX) < colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding) {
+				startRY := colorPickerStartPositionY + colorPickerRectSizeY*1 + colorPickerColorPadding
+				startGY := colorPickerStartPositionY + colorPickerRectSizeY*2 + colorPickerColorPadding
+				startBY := colorPickerStartPositionY + colorPickerRectSizeY*3 + colorPickerColorPadding
+				if int32(mouseAbsY) > startRY && int32(mouseAbsY) < startRY+colorPickerRectSizeY {
+					colorR = mouseAbsX - int(colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding))
 				}
-				if mouseAbsY > 10 && mouseAbsY < 20 {
-					colorG = mouseAbsX - 100
+				if int32(mouseAbsY) > startGY && int32(mouseAbsY) < startGY+colorPickerRectSizeY {
+					colorG = mouseAbsX - int(colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding))
 				}
-				if mouseAbsY > 20 && mouseAbsY < 30 {
-					colorB = mouseAbsX - 100
+				if int32(mouseAbsY) > startBY && int32(mouseAbsY) < startBY+colorPickerRectSizeY {
+					colorB = mouseAbsX - int(colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding))
 				}
 				pixelColor = PixelColor{
 					R: colorR,
 					G: colorG,
 					B: colorB,
 				}
+			}
+		}
+		if mouseButton2Pressed {
+			for yy := 0; yy <= int(wallImage.Height); yy++ {
+				setLineColor(wallImage, 0, yy, int(wallImage.Width), yy, pixelColor)
 			}
 		}
 
@@ -221,9 +276,8 @@ func main() {
 		radius := float32(4.0)
 		camera.Position.X = float32(math.Cos(float64(angle))) * radius
 		camera.Position.Z = float32(math.Sin(float64(angle))) * radius
-		camera.Position.Y = 4.0 // Keep height constant, or change for a different effect
+		camera.Position.Y = 3.5 // Keep height constant, or change for a different effect
 
-		// Make sure to update the target if needed, or keep it fixed
 		camera.Target = raylib.Vector3{0, 0, 0}
 
 		//raylib.DrawGrid(10, 1.0) // Draw a grid
@@ -342,10 +396,11 @@ func setPixelWhite(img *raylib.Image, x, y int, pixelColor PixelColor) {
 
 	xs := []int{x, width - 1 - x, y, height - 1 - y}
 
-	ys := []int{y, height - 1 - y, x, width - 1 - x}
-
-	for _, xi := range xs {
-		for _, yi := range ys {
+	for ixi, xi := range xs {
+		for iyi, yi := range xs {
+			if ixi == iyi { // Variations without repetition
+				continue
+			}
 			if xi >= 0 && xi < width && yi >= 0 && yi < height {
 				index := (yi*width + xi) * bytesPerPixel
 				dataSlice[index] = byte(pixelColor.R)   //R

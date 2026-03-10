@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	screenWidth      = 1920
+	screenWidth      = 2920
 	screenHeight     = 1080
 	screenPixelSize  = 4
 	screenHeightHalf = screenHeight / 2
@@ -86,7 +86,7 @@ func main() {
 		Projection: raylib.CameraPerspective,
 	}
 
-	angle := 0.0
+	angle := 35.0
 	offsetX := 20
 	offsetY := 20
 	lastMouseAbsX := -1
@@ -175,21 +175,19 @@ func main() {
 		// Mouse
 		mouseAbsX := int(raylib.GetMouseX())
 		mouseAbsY := int(raylib.GetMouseY())
-		mouseButton1Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonLeft)
+		mouseButton1Pressed := raylib.IsMouseButtonPressed(raylib.MouseButtonLeft)
+		mouseButton1Down := raylib.IsMouseButtonDown(raylib.MouseButtonLeft)
 		mouseButton2Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonRight)
-		if mouseButton1Pressed {
+		if mouseButton1Down {
 
-			if mouseAbsX-offsetX > 0 && mouseAbsY-offsetY > 0 && mouseAbsX-offsetX <= int(wallImage.Width) && mouseAbsY-offsetY <= int(wallImage.Height) {
-
-				if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
-					setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, pixelColor)
-				}
-				lastMouseAbsX = mouseAbsX
-				lastMouseAbsY = mouseAbsY
+			if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
+				setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, pixelColor)
 			}
+			lastMouseAbsX = mouseAbsX
+			lastMouseAbsY = mouseAbsY
+		}
 
-			//setPixelWhite(wallImage, mouseAbsX-offsetX, mouseAbsY-offsetY)
-
+		if mouseButton1Pressed {
 			if int32(mouseAbsX) > colorPickerStartPositionX && int32(mouseAbsX) < colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding) {
 				startRY := colorPickerStartPositionY + colorPickerRectSizeY*1 + colorPickerColorPadding
 				startGY := colorPickerStartPositionY + colorPickerRectSizeY*2 + colorPickerColorPadding
@@ -292,7 +290,7 @@ func main() {
 		}
 
 		// Increase the angle (adjust speed as needed)
-		angle += 0.05
+		angle += 0.005
 
 		// Calculate new camera position to orbit around the target (center)
 		radius := float32(4.0)

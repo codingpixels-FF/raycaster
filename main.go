@@ -179,7 +179,7 @@ func main() {
 		mouseButton2Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonRight)
 		if mouseButton1Pressed {
 
-			if mouseAbsX-offsetX > 0 && mouseAbsY-offsetY > 0 && mouseAbsX-offsetX < int(wallImage.Width) && mouseAbsY-offsetY < int(wallImage.Height) {
+			if mouseAbsX-offsetX > 0 && mouseAbsY-offsetY > 0 && mouseAbsX-offsetX <= int(wallImage.Width) && mouseAbsY-offsetY <= int(wallImage.Height) {
 
 				if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
 					setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, pixelColor)

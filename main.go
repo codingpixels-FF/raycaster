@@ -131,7 +131,7 @@ func main() {
 			}()
 		}
 
-		prefillBUfferWithImage(offsetX, offsetY, wallImage, wallImageImage, currentPixelBuffer)
+		prefillBufferWithImage(offsetX, offsetY, wallImage, wallImageImage, currentPixelBuffer)
 
 		//Draw color picker
 		//for raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))
@@ -141,7 +141,7 @@ func main() {
 		ii := int32(0)
 		for i := 0; i < colorPickerNumColors; i = i + 2 {
 			ii++
-			// Half-bright color
+			// Red color
 			newColor := raylib.NewColor(uint8(i), uint8(pixelColor.G), uint8(pixelColor.B), 255)
 			raylib.DrawRectangle(
 				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
@@ -151,7 +151,7 @@ func main() {
 				newColor,
 			)
 
-			// Half-bright color
+			// Green color
 			newColor = raylib.NewColor(uint8(pixelColor.R), uint8(i), uint8(pixelColor.B), 255)
 			raylib.DrawRectangle(
 				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
@@ -161,7 +161,7 @@ func main() {
 				newColor,
 			)
 
-			// Half-bright color
+			// Blue color
 			newColor = raylib.NewColor(uint8(pixelColor.R), uint8(pixelColor.G), uint8(i), 255)
 			raylib.DrawRectangle(
 				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
@@ -178,13 +178,18 @@ func main() {
 		mouseButton1Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonLeft)
 		mouseButton2Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonRight)
 		if mouseButton1Pressed {
-			if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
-				setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, pixelColor)
+
+			if mouseAbsX-offsetX > 0 && mouseAbsY-offsetY > 0 && mouseAbsX-offsetX < int(wallImage.Width) && mouseAbsY-offsetY < int(wallImage.Height) {
+
+				if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
+					setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, pixelColor)
+				}
+				lastMouseAbsX = mouseAbsX
+				lastMouseAbsY = mouseAbsY
 			}
 
 			//setPixelWhite(wallImage, mouseAbsX-offsetX, mouseAbsY-offsetY)
-			lastMouseAbsX = mouseAbsX
-			lastMouseAbsY = mouseAbsY
+
 			if int32(mouseAbsX) > colorPickerStartPositionX && int32(mouseAbsX) < colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding) {
 				startRY := colorPickerStartPositionY + colorPickerRectSizeY*1 + colorPickerColorPadding
 				startGY := colorPickerStartPositionY + colorPickerRectSizeY*2 + colorPickerColorPadding
@@ -211,6 +216,23 @@ func main() {
 			}
 		}
 
+		// Contrast background for texture
+		raylib.DrawRectangle(
+			0,
+			0,
+			wallImage.Width+int32(2*offsetX),
+			2*wallImage.Height+int32(3*offsetX),
+			raylib.NewColor(60, 60, 60, 255),
+		)
+		// Currect color indicator
+		raylib.DrawRectangle(
+			int32(offsetX),
+			wallImage.Height+int32(2*offsetY),
+			wallImage.Width,
+			wallImage.Height,
+			raylib.NewColor(uint8(pixelColor.R), uint8(pixelColor.G), uint8(pixelColor.B), 255),
+		)
+
 		wallImageImage = wallImage.ToImage()
 
 		// Switch the image buffer
@@ -234,10 +256,10 @@ func main() {
 		//raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))
 		//raylib.DrawRectangle(0, screenHeight+10, screenWidth, screenHeight+statusBarHeight, raylib.NewColor(0, 0, 255, 255))
 		//playerStatus := fmt.Sprintf("%.2f\n%.2f\n%.2f", player.x, player.y, player.angle)
-		playerStatus := fmt.Sprintf("%.2d\n%.2d\n%.2d\n%.2d\n%.2d", mouseAbsX, mouseAbsY, colorR, colorG, colorB)
+		playerStatus := fmt.Sprintf("%.2d\n%.2d\n%.2d\n%.2d\n%.2d\n%.2d\n%.2d", mouseAbsX, mouseAbsY, colorR, colorG, colorB, lastMouseAbsX, lastMouseAbsY)
 		raylib.DrawText(playerStatus, 20, screenHeight+10, 15, raylib.White)
 
-		playerStatusLegend := fmt.Sprintf("x\ny\nR\nG\nB\n")
+		playerStatusLegend := fmt.Sprintf("x\ny\nR\nG\nB\nLastMouseX\nLastMouseY")
 		raylib.DrawText(playerStatusLegend, 50, screenHeight+10, 15, raylib.White)
 
 		raylib.BeginMode3D(camera)
@@ -295,50 +317,47 @@ func absDiffInt(x, y int) int {
 	return x - y
 }
 
+// Helper functions
+func abs(a float64) float64 {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
+
+func max(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func round(a float64) float64 {
+	if a-float64(int(a)) >= 0.5 {
+		return float64(int(a) + 1)
+	}
+	return float64(int(a))
+}
+
 func setLineColor(img *raylib.Image, lastX, lastY, currentX, currentY int, pixelColor PixelColor) {
-	/*if lastX < 0 || lastX >= int(img.Width) || lastY < 0 || lastY >= int(img.Height) {
-		return // out of bounds
-	}
-	if currentX < 0 || currentX >= int(img.Width) || currentY < 0 || currentY >= int(img.Height) {
-		return // out of bounds
-	}*/
-	//setPixelWhite(img, currentX, currentY)
-	//return
-	// Bresenham's line
-	dx := absDiffInt(currentX, lastX)
-	dy := absDiffInt(currentY, lastY)
 
-	var sx, sy int
-	if lastX < currentX {
-		sx = 1
-	} else {
-		sx = -1
-	}
+	// Digital Differential Analyzer (DDA) algorithm
+	dx := float64(currentX - lastX)
+	dy := float64(currentY - lastY)
 
-	if lastY < currentY {
-		sy = 1
-	} else {
-		sy = -1
-	}
+	steps := int(max(abs(dx), abs(dy)))
 
-	balanceErr := dx - dy
+	// Calculate the increment for each step
+	xIncrement := dx / float64(steps)
+	yIncrement := dy / float64(steps)
 
-	x, y := lastX, lastY
+	x := float64(lastX)
+	y := float64(lastY)
 
-	for {
-		setPixelWhite(img, x, y, pixelColor)
-		if x == currentX && y == currentY {
-			break
-		}
-		e2 := 2 * balanceErr
-		if e2 > -dy {
-			balanceErr -= dy
-			x += sx
-		}
-		if e2 < dx {
-			balanceErr += dx
-			y += sy
-		}
+	for i := 0; i <= steps; i++ {
+		setPixelWhite(img, int(round(x)), int(round(y)), pixelColor)
+		x += xIncrement
+		y += yIncrement
 	}
 }
 
@@ -347,73 +366,33 @@ func setPixelWhite(img *raylib.Image, x, y int, pixelColor PixelColor) {
 		return // out of bounds
 	}
 
-	/*bytesPerPixel := 4 // RGBA
-
-	reverseX := (int(img.Width) - 1 - x)
-	reverseY := (int(img.Height) - 1 - y)
-
-	size := int(img.Width) * int(img.Height) * bytesPerPixel
-
-	// Convert unsafe.Pointer to a byte slice with the correct length
-	dataSlice := (*[1 << 30]byte)(img.Data)[:size:size]
-
-	// Set pixel to white
-	indexLeftTop := (y*int(img.Width) + x) * bytesPerPixel
-	dataSlice[indexLeftTop] = 255   // R
-	dataSlice[indexLeftTop+1] = 255 // G
-	dataSlice[indexLeftTop+2] = 255 // B
-	dataSlice[indexLeftTop+3] = 255 // A
-
-	// Set pixel to white
-	indexRightBottom := (reverseY*int(img.Width) + reverseX) * bytesPerPixel
-	dataSlice[indexRightBottom] = 255   // R
-	dataSlice[indexRightBottom+1] = 255 // G
-	dataSlice[indexRightBottom+2] = 255 // B
-	dataSlice[indexRightBottom+3] = 255 // A
-
-	// Set pixel to white
-	indexRightTop := (y*int(img.Width) + reverseX) * bytesPerPixel
-	dataSlice[indexRightTop] = 255   // R
-	dataSlice[indexRightTop+1] = 255 // G
-	dataSlice[indexRightTop+2] = 255 // B
-	dataSlice[indexRightTop+3] = 255 // A
-
-	// Set pixel to white
-	indexLeftBottom := (reverseY*int(img.Width) + x) * bytesPerPixel
-	dataSlice[indexLeftBottom] = 255   // R
-	dataSlice[indexLeftBottom+1] = 255 // G
-	dataSlice[indexLeftBottom+2] = 255 // B
-	dataSlice[indexLeftBottom+3] = 255 // A*/
-
-	// TODO FLIPP X FOR Y and LX FOR LY
-
 	width, height := int(img.Width), int(img.Height)
 	bytesPerPixel := 4
 
 	dataSlice := (*[1 << 30]byte)(img.Data)[: width*height*bytesPerPixel : width*height*bytesPerPixel]
 
 	// Generate symmetric positions
-
-	xs := []int{x, width - 1 - x, y, height - 1 - y}
-
+	xs := []int{x, x, width - x - 1, width - x - 1}
+	ys := []int{y, height - y - 1, y, height - y - 1}
 	for ixi, xi := range xs {
-		for iyi, yi := range xs {
-			if ixi == iyi { // Variations without repetition
-				continue
-			}
-			if xi >= 0 && xi < width && yi >= 0 && yi < height {
-				index := (yi*width + xi) * bytesPerPixel
-				dataSlice[index] = byte(pixelColor.R)   //R
-				dataSlice[index+1] = byte(pixelColor.G) //G
-				dataSlice[index+2] = byte(pixelColor.B) //B
-				dataSlice[index+3] = 255                //A
-			}
-		}
-	}
+		yi := ys[ixi]
+		index := (yi*width + xi) * bytesPerPixel
+		dataSlice[index] = byte(pixelColor.R)   //R
+		dataSlice[index+1] = byte(pixelColor.G) //G
+		dataSlice[index+2] = byte(pixelColor.B) //B
+		dataSlice[index+3] = 255                //A
 
+		// flip rows and columns
+		index = (yi + xi*width) * bytesPerPixel
+		dataSlice[index] = byte(pixelColor.R)   //R
+		dataSlice[index+1] = byte(pixelColor.G) //G
+		dataSlice[index+2] = byte(pixelColor.B) //B
+		dataSlice[index+3] = 255                //A
+
+	}
 }
 
-func prefillBUfferWithImage(offsetX int, offsetY int, wallImage *raylib.Image, wallImageImage image.Image, currentPixelBuffer *[]uint32) {
+func prefillBufferWithImage(offsetX int, offsetY int, wallImage *raylib.Image, wallImageImage image.Image, currentPixelBuffer *[]uint32) {
 	for rayX := offsetX; rayX < int(wallImage.Width)+offsetX; rayX++ {
 		corX := int(int32(rayX)) - offsetX
 		for rayY := offsetY; rayY < int(wallImage.Height)+offsetY; rayY++ {

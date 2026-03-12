@@ -1,10 +1,10 @@
 package main
 
 import (
+	"coding-pixels/raycasting/codingpixels"
 	"fmt"
 	"image"
 	"math"
-	_ "strconv"
 	"sync"
 	"unsafe"
 
@@ -21,12 +21,6 @@ const (
 	renderHeight     = screenHeight / 1
 	renderHeightHalf = renderHeight / 2
 )
-
-type PixelColor struct {
-	R int
-	G int
-	B int
-}
 
 func main() {
 	// Set the maximum number of CPU cores to use
@@ -91,20 +85,11 @@ func main() {
 	offsetY := 20
 	lastMouseAbsX := -1
 	lastMouseAbsY := -1
-	colorR := 0
-	colorG := 0
-	colorB := 0
-	pixelColor := PixelColor{
-		R: colorR,
-		G: colorG,
-		B: colorB,
-	}
-	colorPickerNumColors := 255
-	colorPickerRectSizeX := int32(3)
-	colorPickerRectSizeY := colorPickerRectSizeX * 4
-	colorPickerColorPadding := int32(1)
-	colorPickerStartPositionX := int32(100)
-	colorPickerStartPositionY := colorPickerRectSizeX * 2
+
+	fmt.Println("Program finished")
+	// color picker
+	colorPicker := codingpixels.NewColorPicker(254, 3, 30, 1, 2, wallImage.Width+int32(offsetX*2), 0, 2)
+	fmt.Println("Color picker init done")
 
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup
@@ -133,84 +118,34 @@ func main() {
 
 		prefillBufferWithImage(offsetX, offsetY, wallImage, wallImageImage, currentPixelBuffer)
 
-		//Draw color picker
-		//for raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))
-
-		// Parameters for color blocks
-
-		ii := int32(0)
-		for i := 0; i < colorPickerNumColors; i = i + 2 {
-			ii++
-			// Red color
-			newColor := raylib.NewColor(uint8(i), uint8(pixelColor.G), uint8(pixelColor.B), 255)
-			raylib.DrawRectangle(
-				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
-				colorPickerStartPositionY+colorPickerRectSizeY*1+colorPickerColorPadding,
-				colorPickerRectSizeX,
-				colorPickerRectSizeY,
-				newColor,
-			)
-
-			// Green color
-			newColor = raylib.NewColor(uint8(pixelColor.R), uint8(i), uint8(pixelColor.B), 255)
-			raylib.DrawRectangle(
-				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
-				colorPickerStartPositionY+colorPickerRectSizeY*2+colorPickerColorPadding,
-				colorPickerRectSizeX,
-				colorPickerRectSizeY,
-				newColor,
-			)
-
-			// Blue color
-			newColor = raylib.NewColor(uint8(pixelColor.R), uint8(pixelColor.G), uint8(i), 255)
-			raylib.DrawRectangle(
-				colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding),
-				colorPickerStartPositionY+colorPickerRectSizeY*3+colorPickerColorPadding,
-				colorPickerRectSizeX,
-				colorPickerRectSizeY,
-				newColor,
-			)
-		}
+		// Color picker position
+		colorPicker.Render()
 
 		// Mouse
 		mouseAbsX := int(raylib.GetMouseX())
 		mouseAbsY := int(raylib.GetMouseY())
-		mouseButton1Pressed := raylib.IsMouseButtonPressed(raylib.MouseButtonLeft)
+		//mouseButton1Pressed := raylib.IsMouseButtonPressed(raylib.MouseButtonLeft)
 		mouseButton1Down := raylib.IsMouseButtonDown(raylib.MouseButtonLeft)
 		mouseButton2Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonRight)
 		if mouseButton1Down {
-
-			if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
-				setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, pixelColor)
+			if mouseAbsX < int(wallImage.Width)+offsetX*2 {
+				if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
+					setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, colorPicker.GetPixelColor())
+				}
+				lastMouseAbsX = mouseAbsX
+				lastMouseAbsY = mouseAbsY
 			}
-			lastMouseAbsX = mouseAbsX
-			lastMouseAbsY = mouseAbsY
-		}
 
-		if mouseButton1Pressed {
-			if int32(mouseAbsX) > colorPickerStartPositionX && int32(mouseAbsX) < colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding) {
-				startRY := colorPickerStartPositionY + colorPickerRectSizeY*1 + colorPickerColorPadding
-				startGY := colorPickerStartPositionY + colorPickerRectSizeY*2 + colorPickerColorPadding
-				startBY := colorPickerStartPositionY + colorPickerRectSizeY*3 + colorPickerColorPadding
-				if int32(mouseAbsY) > startRY && int32(mouseAbsY) < startRY+colorPickerRectSizeY {
-					colorR = mouseAbsX - int(colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding))
-				}
-				if int32(mouseAbsY) > startGY && int32(mouseAbsY) < startGY+colorPickerRectSizeY {
-					colorG = mouseAbsX - int(colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding))
-				}
-				if int32(mouseAbsY) > startBY && int32(mouseAbsY) < startBY+colorPickerRectSizeY {
-					colorB = mouseAbsX - int(colorPickerStartPositionX+ii*(colorPickerRectSizeX+colorPickerColorPadding))
-				}
-				pixelColor = PixelColor{
-					R: colorR,
-					G: colorG,
-					B: colorB,
-				}
+			if int32(mouseAbsX) > colorPicker.StartPositionX && int32(mouseAbsX) < colorPicker.ColorPickerEndPositionX {
+				colorPicker.UpdateColors(int32(mouseAbsX), int32(mouseAbsY))
+				// reset lines
+				lastMouseAbsX = -1
+				lastMouseAbsY = -1
 			}
 		}
 		if mouseButton2Pressed {
 			for yy := 0; yy <= int(wallImage.Height); yy++ {
-				setLineColor(wallImage, 0, yy, int(wallImage.Width), yy, pixelColor)
+				setLineColor(wallImage, 0, yy, int(wallImage.Width), yy, colorPicker.GetPixelColor())
 			}
 		}
 
@@ -223,12 +158,13 @@ func main() {
 			raylib.NewColor(60, 60, 60, 255),
 		)
 		// Currect color indicator
+		pixelColor := colorPicker.GetPixelColor()
 		raylib.DrawRectangle(
 			int32(offsetX),
 			wallImage.Height+int32(2*offsetY),
 			wallImage.Width,
 			wallImage.Height,
-			raylib.NewColor(uint8(pixelColor.R), uint8(pixelColor.G), uint8(pixelColor.B), 255),
+			raylib.NewColor(pixelColor.R, pixelColor.G, pixelColor.B, 255),
 		)
 
 		wallImageImage = wallImage.ToImage()
@@ -254,7 +190,7 @@ func main() {
 		//raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))
 		//raylib.DrawRectangle(0, screenHeight+10, screenWidth, screenHeight+statusBarHeight, raylib.NewColor(0, 0, 255, 255))
 		//playerStatus := fmt.Sprintf("%.2f\n%.2f\n%.2f", player.x, player.y, player.angle)
-		playerStatus := fmt.Sprintf("%.2d\n%.2d\n%.2d\n%.2d\n%.2d\n%.2d\n%.2d", mouseAbsX, mouseAbsY, colorR, colorG, colorB, lastMouseAbsX, lastMouseAbsY)
+		playerStatus := fmt.Sprintf("%.2d\n%.2d\n%.2d\n%.2d\n%.2d\n%.2d\n%.2d", mouseAbsX, mouseAbsY, pixelColor.R, pixelColor.G, pixelColor.B, lastMouseAbsX, lastMouseAbsY)
 		raylib.DrawText(playerStatus, 20, screenHeight+10, 15, raylib.White)
 
 		playerStatusLegend := fmt.Sprintf("x\ny\nR\nG\nB\nLastMouseX\nLastMouseY")
@@ -337,7 +273,7 @@ func round(a float64) float64 {
 	return float64(int(a))
 }
 
-func setLineColor(img *raylib.Image, lastX, lastY, currentX, currentY int, pixelColor PixelColor) {
+func setLineColor(img *raylib.Image, lastX, lastY, currentX, currentY int, pixelColor codingpixels.PixelColor) {
 
 	// Digital Differential Analyzer (DDA) algorithm
 	dx := float64(currentX - lastX)
@@ -359,7 +295,7 @@ func setLineColor(img *raylib.Image, lastX, lastY, currentX, currentY int, pixel
 	}
 }
 
-func setPixelWhite(img *raylib.Image, x, y int, pixelColor PixelColor) {
+func setPixelWhite(img *raylib.Image, x, y int, pixelColor codingpixels.PixelColor) {
 	if x < 0 || x >= int(img.Width) || y < 0 || y >= int(img.Height) {
 		return // out of bounds
 	}

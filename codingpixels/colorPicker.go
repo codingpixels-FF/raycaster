@@ -38,6 +38,7 @@ func NewColorPicker(numColors uint8, singleColorRectSizeX int32, singleColorRect
 }
 
 func (colorPicker *ColorPicker) Render() {
+	halfFullColor := 3 * 128
 	columnCount := int32(0)
 	singleColorSizeWithPaddingX := colorPicker.SingleColorRectSizeX + colorPicker.SingleColorPaddingX
 	singleColorSizeWithPaddingY := colorPicker.SingleColorRectSizeY + colorPicker.SingleColorPaddingY
@@ -57,7 +58,7 @@ func (colorPicker *ColorPicker) Render() {
 		if colorNum == colorPicker.CurrentPixelColor.R {
 			newColor = raylib.NewColor(255, 255, 255, 255)
 			colorValue := int(colorNum) + int(colorPicker.CurrentPixelColor.G) + int(colorPicker.CurrentPixelColor.B)
-			if colorValue > 128*3 {
+			if colorValue > halfFullColor {
 				newColor = raylib.NewColor(0, 0, 0, 255)
 			}
 		}
@@ -74,7 +75,7 @@ func (colorPicker *ColorPicker) Render() {
 		if colorNum == colorPicker.CurrentPixelColor.G {
 			newColor = raylib.NewColor(255, 255, 255, 255)
 			colorValue := int(colorPicker.CurrentPixelColor.R) + int(colorNum) + int(colorPicker.CurrentPixelColor.B)
-			if colorValue > 128*3 {
+			if colorValue > halfFullColor {
 				newColor = raylib.NewColor(0, 0, 0, 255)
 			}
 		}
@@ -91,7 +92,7 @@ func (colorPicker *ColorPicker) Render() {
 		if colorNum == colorPicker.CurrentPixelColor.B {
 			newColor = raylib.NewColor(255, 255, 255, 255)
 			colorValue := int(colorPicker.CurrentPixelColor.R) + int(colorPicker.CurrentPixelColor.G) + int(colorNum)
-			if colorValue > 128*3 {
+			if colorValue > halfFullColor {
 				newColor = raylib.NewColor(0, 0, 0, 255)
 			}
 		}

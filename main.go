@@ -4,7 +4,6 @@ import (
 	"coding-pixels/raycasting/codingpixels"
 	"fmt"
 	"image"
-	"math"
 	"sync"
 	"unsafe"
 
@@ -12,7 +11,7 @@ import (
 )
 
 const (
-	screenWidth      = 2920
+	screenWidth      = 1980
 	screenHeight     = 1080
 	screenPixelSize  = 4
 	screenHeightHalf = screenHeight / 2
@@ -26,10 +25,10 @@ func main() {
 	// Set the maximum number of CPU cores to use
 	// Set to debug or trace level for detailed logs
 	raylib.SetTraceLogLevel(raylib.LogError)
-	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Image mapping on objects in Go")
+	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "ColorPicker in Go")
 	defer raylib.CloseWindow()
 
-	wallTexture := raylib.LoadTexture("repeat_triangle_64.png") // Loaded in GPU memory (VRAM)
+	wallTexture := raylib.LoadTexture("raw_wizzard1.png") // Loaded in GPU memory (VRAM)
 	defer raylib.UnloadTexture(wallTexture)
 	wallImage := raylib.LoadImageFromTexture(wallTexture)      // Loaded in CPU memory (RAM)
 	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
@@ -37,7 +36,7 @@ func main() {
 	// Create a 2D array for the pixel data of one column
 	wallImageImage := wallImage.ToImage()
 
-	raylib.SetTargetFPS(6)
+	raylib.SetTargetFPS(30)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
@@ -67,27 +66,13 @@ func main() {
 		Height: renderHeight,
 	}
 
-	// Define the camera to look into our 3d world
-	// Define the camera to look into our 3d world
-	camera := raylib.Camera{
-		Position: raylib.Vector3{
-			Y: 10.0,
-			Z: 10.0,
-		},
-		Target:     raylib.Vector3{},
-		Up:         raylib.Vector3{Y: 1.0},
-		Fovy:       45.0,
-		Projection: raylib.CameraPerspective,
-	}
-
-	angle := 35.0
 	offsetX := 20
 	offsetY := 20
 	lastMouseAbsX := -1
 	lastMouseAbsY := -1
 
 	// color picker
-	colorPicker := codingpixels.NewColorPicker(254, 3, 30, 1, 2, wallImage.Width+int32(offsetX*2), 0, 2)
+	colorPicker := codingpixels.NewColorPicker(254, 8, 340, 1, 2, wallImage.Width+int32(offsetX*2), 0, 2)
 
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup
@@ -126,7 +111,7 @@ func main() {
 		mouseButton1Down := raylib.IsMouseButtonDown(raylib.MouseButtonLeft)
 		mouseButton2Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonRight)
 		if mouseButton1Down {
-			if mouseAbsX < int(wallImage.Width)+offsetX*2 {
+			if mouseAbsX > 0 && mouseAbsX < int(wallImage.Width)+offsetX*2 && mouseAbsY > 0 && mouseAbsY < int(wallImage.Height)+offsetY {
 				if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
 					setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, colorPicker.GetPixelColor())
 				}
@@ -142,8 +127,8 @@ func main() {
 			}
 		}
 		if mouseButton2Pressed {
-			for yy := 0; yy <= int(wallImage.Height); yy++ {
-				setLineColor(wallImage, 0, yy, int(wallImage.Width), yy, colorPicker.GetPixelColor())
+			for yy := 0; yy < int(wallImage.Height)-2; yy++ {
+				setLineColor(wallImage, 0, yy, int(wallImage.Width)-2, yy, colorPicker.GetPixelColor())
 			}
 		}
 
@@ -189,54 +174,11 @@ func main() {
 		//raylib.DrawRectangle(0, screenHeight+10, screenWidth, screenHeight+statusBarHeight, raylib.NewColor(0, 0, 255, 255))
 		//playerStatus := fmt.Sprintf("%.2f\n%.2f\n%.2f", player.x, player.y, player.angle)
 		playerStatus := fmt.Sprintf("%.2d\n%.2d\n%.2d\n%.2d\n%.2d\n%.2d\n%.2d", mouseAbsX, mouseAbsY, pixelColor.R, pixelColor.G, pixelColor.B, lastMouseAbsX, lastMouseAbsY)
-		raylib.DrawText(playerStatus, 20, screenHeight+10, 15, raylib.White)
+		raylib.DrawText(playerStatus, screenWidth-150, screenHeight+10, 15, raylib.White)
 
 		playerStatusLegend := fmt.Sprintf("x\ny\nR\nG\nB\nLastMouseX\nLastMouseY")
-		raylib.DrawText(playerStatusLegend, 50, screenHeight+10, 15, raylib.White)
-
-		raylib.BeginMode3D(camera)
-
-		// Draw cube with an applied texture
-
-		currentTexture := raylib.LoadTextureFromImage(wallImage)
-
-		for xx := float32(-1.0); xx <= 1.0; xx = xx + 1.0 {
-
-			vec := raylib.Vector3{
-				X: xx,
-				Y: -1.0,
-			}
-			DrawCubeTexture(currentTexture, vec, 1.0, 1.0, 1.0, raylib.White)
-
-			vec = raylib.Vector3{
-				X: xx,
-				Y: 1.0,
-			}
-			DrawCubeTexture(currentTexture, vec, 1.0, 1.0, 1.0, raylib.White)
-
-			if xx != 0 {
-				vec = raylib.Vector3{
-					X: xx,
-					Y: 0.0,
-				}
-				DrawCubeTexture(currentTexture, vec, 1.0, 1.0, 1.0, raylib.White)
-			}
-		}
-
-		// Increase the angle (adjust speed as needed)
-		angle += 0.005
-
-		// Calculate new camera position to orbit around the target (center)
-		radius := float32(4.0)
-		camera.Position.X = float32(math.Cos(float64(angle))) * radius
-		camera.Position.Z = float32(math.Sin(float64(angle))) * radius
-		camera.Position.Y = 3.5 // Keep height constant, or change for a different effect
-
-		camera.Target = raylib.Vector3{0, 0, 0}
-
-		//raylib.DrawGrid(10, 1.0) // Draw a grid
-		raylib.EndMode3D()
-		raylib.DrawFPS(screenWidth-100, 10)
+		raylib.DrawText(playerStatusLegend, screenWidth-100, screenHeight+10, 15, raylib.White)
+		raylib.DrawFPS(screenWidth-100, screenHeight+150)
 		raylib.EndDrawing()
 		raylib.UnloadTexture(imageBufferTexture)
 	}
@@ -304,8 +246,8 @@ func setPixelWhite(img *raylib.Image, x, y int, pixelColor codingpixels.PixelCol
 	dataSlice := (*[1 << 30]byte)(img.Data)[: width*height*bytesPerPixel : width*height*bytesPerPixel]
 
 	// Generate symmetric positions
-	xs := []int{x, x, width - x - 1, width - x - 1}
-	ys := []int{y, height - y - 1, y, height - y - 1}
+	xs := []int{x, x, x + 1, x + 1}
+	ys := []int{y, y + 1, y, y + 1}
 	for ixi, xi := range xs {
 		yi := ys[ixi]
 		index := (yi*width + xi) * bytesPerPixel
@@ -313,14 +255,6 @@ func setPixelWhite(img *raylib.Image, x, y int, pixelColor codingpixels.PixelCol
 		dataSlice[index+1] = byte(pixelColor.G) //G
 		dataSlice[index+2] = byte(pixelColor.B) //B
 		dataSlice[index+3] = 255                //A
-
-		// flip rows and columns
-		index = (yi + xi*width) * bytesPerPixel
-		dataSlice[index] = byte(pixelColor.R)   //R
-		dataSlice[index+1] = byte(pixelColor.G) //G
-		dataSlice[index+2] = byte(pixelColor.B) //B
-		dataSlice[index+3] = 255                //A
-
 	}
 }
 

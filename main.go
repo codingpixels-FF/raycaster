@@ -4,7 +4,6 @@ import (
 	"coding-pixels/raycasting/codingpixels"
 	"fmt"
 	"image"
-	"sync"
 	"unsafe"
 
 	raylib "github.com/gen2brain/raylib-go/raylib"
@@ -34,8 +33,6 @@ func main() {
 	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
 	defer raylib.UnloadImage(wallImage)
 	// Create a 2D array for the pixel data of one column
-	wallImageImage := wallImage.ToImage()
-
 	raylib.SetTargetFPS(30)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
@@ -51,7 +48,6 @@ func main() {
 		Mipmaps: 1,
 		Format:  raylib.UncompressedR8g8b8a8,
 	}
-	defer raylib.UnloadImage(&img)
 
 	finalRenderRectagle := raylib.Rectangle{
 		X:      0,
@@ -71,39 +67,33 @@ func main() {
 	offsetY := 20
 	lastMouseAbsX := -1
 	lastMouseAbsY := -1
+	//scaleOnX := 0.01
 
 	// color picker
 	colorPicker := codingpixels.NewColorPicker(254, 8, 340, 1, 2, wallImage.Width+int32(offsetX*2), 0, 2)
+	//colorPickerSingleColorRectSizeX := float64(colorPicker.SingleColorRectSizeX)
 
 	for !raylib.WindowShouldClose() {
-		var wg sync.WaitGroup
+
 		// Check if we point to pixelBuffer2
 		// Empty the other pixel buffer safely
 		if &(*currentPixelBuffer)[0] == &pixelBuffer2[0] {
 			currentPixelBuffer = &pixelBuffer1
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				/*for i := range pixelBuffer2 {
-					pixelBuffer2[i] = 0
-				}*/
-			}()
 		} else {
 			currentPixelBuffer = &pixelBuffer2
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				/*for i := range pixelBuffer1 {
-					pixelBuffer1[i] = 0
-				}*/
-			}()
 		}
 
+		wallImageImage := wallImage.ToImage()
 		prefillBufferWithImage(offsetX, offsetY, wallImage, wallImageImage, currentPixelBuffer)
 
 		// Color picker position
 		colorPicker.Render()
+		//colorPicker.SingleColorPaddingX -= 1
+		/*colorPicker.SingleColorRectSizeY -= 1
+
+		colorPickerSingleColorRectSizeX -= scaleOnX
+		colorPicker.SingleColorRectSizeX = int32(colorPickerSingleColorRectSizeX)
+		colorPicker.CalculateFullDimensions()*/
 
 		// Mouse
 		mouseAbsX := int(raylib.GetMouseX())
@@ -179,7 +169,7 @@ func main() {
 		raylib.DrawFPS(screenWidth-100, screenHeight+150)
 		raylib.EndDrawing()
 		raylib.UnloadTexture(imageBufferTexture)
-
+		raylib.UnloadImage(wallImage)
 	}
 }
 

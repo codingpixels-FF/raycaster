@@ -11,15 +11,20 @@ type PixelColor struct {
 }
 
 type ColorPicker struct {
-	CurrentPixelColor       PixelColor
-	NumColors               uint8
-	SingleColorRectSizeX    int32
-	SingleColorRectSizeY    int32
-	SingleColorPaddingX     int32
-	SingleColorPaddingY     int32
-	StartPositionX          int32
-	StartPositionY          int32
-	ColorIncrement          uint8
+	CurrentPixelColor PixelColor
+	NumColors         uint8
+
+	SingleColorRectSizeX int32
+	SingleColorRectSizeY int32
+
+	SingleColorPaddingX int32
+	SingleColorPaddingY int32
+
+	StartPositionX int32
+	StartPositionY int32
+
+	ColorIncrement uint8
+
 	ColorPickerEndPositionX int32
 	ColorPickerEndPositionY int32
 }
@@ -33,7 +38,7 @@ func NewColorPicker(numColors uint8, singleColorRectSizeX int32, singleColorRect
 		G: 0,
 		B: 0,
 	}, NumColors: numColors, SingleColorRectSizeX: singleColorRectSizeX, SingleColorRectSizeY: singleColorRectSizeY, SingleColorPaddingX: singleColorPaddingX, SingleColorPaddingY: singleColorPaddingY, StartPositionX: startPositionX, StartPositionY: startPositionY, ColorIncrement: colorIncrement}
-	colorPicker.calculateFullDimensions()
+	colorPicker.CalculateFullDimensions()
 	return colorPicker
 }
 
@@ -133,7 +138,7 @@ func (colorPicker *ColorPicker) GetPixelColor() PixelColor {
 	return colorPicker.CurrentPixelColor
 }
 
-func (colorPicker *ColorPicker) calculateFullDimensions() {
+func (colorPicker *ColorPicker) CalculateFullDimensions() {
 	columnCount := int32(0)
 	singleColorSizeWithPaddingX := colorPicker.SingleColorRectSizeX + colorPicker.SingleColorPaddingX
 	singleColorSizeWithPaddingY := colorPicker.SingleColorRectSizeY + colorPicker.SingleColorPaddingY

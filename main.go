@@ -51,6 +51,7 @@ func main() {
 		Mipmaps: 1,
 		Format:  raylib.UncompressedR8g8b8a8,
 	}
+	defer raylib.UnloadImage(&img)
 
 	finalRenderRectagle := raylib.Rectangle{
 		X:      0,
@@ -150,8 +151,6 @@ func main() {
 			raylib.NewColor(pixelColor.R, pixelColor.G, pixelColor.B, 255),
 		)
 
-		wallImageImage = wallImage.ToImage()
-
 		// Switch the image buffer
 		dataPtr = unsafe.Pointer(&(*currentPixelBuffer)[0])
 		img = raylib.Image{
@@ -163,7 +162,6 @@ func main() {
 		}
 
 		imageBufferTexture := raylib.LoadTextureFromImage(&img)
-		defer raylib.UnloadImage(&img)
 
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.NewColor(0, 0, 0, 255))
@@ -181,6 +179,7 @@ func main() {
 		raylib.DrawFPS(screenWidth-100, screenHeight+150)
 		raylib.EndDrawing()
 		raylib.UnloadTexture(imageBufferTexture)
+
 	}
 }
 

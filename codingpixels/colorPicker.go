@@ -41,13 +41,29 @@ func (colorPicker *ColorPicker) Render() {
 	columnCount := int32(0)
 	singleColorSizeWithPaddingX := colorPicker.SingleColorRectSizeX + colorPicker.SingleColorPaddingX
 	singleColorSizeWithPaddingY := colorPicker.SingleColorRectSizeY + colorPicker.SingleColorPaddingY
-	for colorNum := uint8(0); colorNum < colorPicker.NumColors; colorNum = colorNum + colorPicker.ColorIncrement {
 
-		// Red color
+	// Background
+	raylib.DrawRectangle(
+		colorPicker.StartPositionX,
+		colorPicker.StartPositionY,
+		colorPicker.ColorPickerEndPositionX-colorPicker.StartPositionX+colorPicker.SingleColorPaddingX,
+		colorPicker.ColorPickerEndPositionY-colorPicker.StartPositionY,
+		raylib.NewColor(30, 30, 30, 255),
+	)
+	// RGB picker
+	for colorNum := uint8(0); colorNum < colorPicker.NumColors; colorNum = colorNum + colorPicker.ColorIncrement {
 		newColor := raylib.NewColor(colorNum, colorPicker.CurrentPixelColor.G, colorPicker.CurrentPixelColor.B, 255)
+		// Red color
+		if colorNum == colorPicker.CurrentPixelColor.R {
+			newColor = raylib.NewColor(255, 255, 255, 255)
+			colorValue := int(colorNum) + int(colorPicker.CurrentPixelColor.G) + int(colorPicker.CurrentPixelColor.B)
+			if colorValue > 128*3 {
+				newColor = raylib.NewColor(0, 0, 0, 255)
+			}
+		}
 		raylib.DrawRectangle(
 			colorPicker.StartPositionX+columnCount*(singleColorSizeWithPaddingX),
-			colorPicker.StartPositionY+(singleColorSizeWithPaddingY)*1,
+			colorPicker.StartPositionY+(singleColorSizeWithPaddingY)*0,
 			colorPicker.SingleColorRectSizeX,
 			colorPicker.SingleColorRectSizeY,
 			newColor,
@@ -55,9 +71,16 @@ func (colorPicker *ColorPicker) Render() {
 
 		// Green color
 		newColor = raylib.NewColor(colorPicker.CurrentPixelColor.R, colorNum, colorPicker.CurrentPixelColor.B, 255)
+		if colorNum == colorPicker.CurrentPixelColor.G {
+			newColor = raylib.NewColor(255, 255, 255, 255)
+			colorValue := int(colorPicker.CurrentPixelColor.R) + int(colorNum) + int(colorPicker.CurrentPixelColor.B)
+			if colorValue > 128*3 {
+				newColor = raylib.NewColor(0, 0, 0, 255)
+			}
+		}
 		raylib.DrawRectangle(
 			colorPicker.StartPositionX+columnCount*singleColorSizeWithPaddingX,
-			colorPicker.StartPositionY+singleColorSizeWithPaddingY*2,
+			colorPicker.StartPositionY+singleColorSizeWithPaddingY*1,
 			colorPicker.SingleColorRectSizeX,
 			colorPicker.SingleColorRectSizeY,
 			newColor,
@@ -65,9 +88,16 @@ func (colorPicker *ColorPicker) Render() {
 
 		// Blue color
 		newColor = raylib.NewColor(colorPicker.CurrentPixelColor.R, colorPicker.CurrentPixelColor.G, colorNum, 255)
+		if colorNum == colorPicker.CurrentPixelColor.B {
+			newColor = raylib.NewColor(255, 255, 255, 255)
+			colorValue := int(colorPicker.CurrentPixelColor.R) + int(colorPicker.CurrentPixelColor.G) + int(colorNum)
+			if colorValue > 128*3 {
+				newColor = raylib.NewColor(0, 0, 0, 255)
+			}
+		}
 		raylib.DrawRectangle(
 			colorPicker.StartPositionX+columnCount*singleColorSizeWithPaddingX,
-			colorPicker.StartPositionY+singleColorSizeWithPaddingY*3,
+			colorPicker.StartPositionY+singleColorSizeWithPaddingY*2,
 			colorPicker.SingleColorRectSizeX,
 			colorPicker.SingleColorRectSizeY,
 			newColor,
@@ -77,15 +107,15 @@ func (colorPicker *ColorPicker) Render() {
 
 	// update dimensions
 	colorPicker.ColorPickerEndPositionX = colorPicker.StartPositionX + columnCount*(singleColorSizeWithPaddingX) + colorPicker.SingleColorPaddingX
-	colorPicker.ColorPickerEndPositionY = colorPicker.StartPositionY + singleColorSizeWithPaddingY*3
+	colorPicker.ColorPickerEndPositionY = colorPicker.StartPositionY + singleColorSizeWithPaddingY*2
 }
 
 func (colorPicker *ColorPicker) UpdateColors(mouseAbsX int32, mouseAbsY int32) {
 	singleColorSizeWithPaddingX := colorPicker.SingleColorRectSizeX + colorPicker.SingleColorPaddingX
 	singleColorSizeWithPaddingY := colorPicker.SingleColorRectSizeY + colorPicker.SingleColorPaddingY
-	startRY := colorPicker.StartPositionY + (singleColorSizeWithPaddingY)*1
-	startGY := colorPicker.StartPositionY + singleColorSizeWithPaddingY*2
-	startBY := colorPicker.StartPositionY + singleColorSizeWithPaddingY*3
+	startRY := colorPicker.StartPositionY
+	startGY := colorPicker.StartPositionY + singleColorSizeWithPaddingY*1
+	startBY := colorPicker.StartPositionY + singleColorSizeWithPaddingY*2
 	if mouseAbsY > startRY && mouseAbsY < startRY+colorPicker.SingleColorRectSizeY {
 		colorPicker.CurrentPixelColor.R = uint8((mouseAbsX-colorPicker.StartPositionX)/singleColorSizeWithPaddingX) * colorPicker.ColorIncrement
 	}
@@ -110,5 +140,5 @@ func (colorPicker *ColorPicker) calculateFullDimensions() {
 		columnCount++
 	}
 	colorPicker.ColorPickerEndPositionX = colorPicker.StartPositionX + columnCount*(singleColorSizeWithPaddingX) + colorPicker.SingleColorPaddingX
-	colorPicker.ColorPickerEndPositionY = colorPicker.StartPositionY + singleColorSizeWithPaddingY*3
+	colorPicker.ColorPickerEndPositionY = colorPicker.StartPositionY + singleColorSizeWithPaddingY*2
 }

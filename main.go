@@ -86,10 +86,8 @@ func main() {
 	lastMouseAbsX := -1
 	lastMouseAbsY := -1
 
-	fmt.Println("Program finished")
 	// color picker
 	colorPicker := codingpixels.NewColorPicker(254, 3, 30, 1, 2, wallImage.Width+int32(offsetX*2), 0, 2)
-	fmt.Println("Color picker init done")
 
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup

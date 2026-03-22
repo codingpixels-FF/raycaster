@@ -113,7 +113,7 @@ func (colorPicker *ColorPicker) Render() {
 
 	// update dimensions
 	colorPicker.ColorPickerEndPositionX = colorPicker.StartPositionX + columnCount*(singleColorSizeWithPaddingX) + colorPicker.SingleColorPaddingX
-	colorPicker.ColorPickerEndPositionY = colorPicker.StartPositionY + singleColorSizeWithPaddingY*2
+	colorPicker.ColorPickerEndPositionY = colorPicker.StartPositionY + singleColorSizeWithPaddingY*3
 }
 
 func (colorPicker *ColorPicker) UpdateColors(mouseAbsX int32, mouseAbsY int32) {
@@ -146,5 +146,5 @@ func (colorPicker *ColorPicker) CalculateFullDimensions() {
 		columnCount++
 	}
 	colorPicker.ColorPickerEndPositionX = colorPicker.StartPositionX + columnCount*(singleColorSizeWithPaddingX) + colorPicker.SingleColorPaddingX
-	colorPicker.ColorPickerEndPositionY = colorPicker.StartPositionY + singleColorSizeWithPaddingY*2
+	colorPicker.ColorPickerEndPositionY = colorPicker.StartPositionY + singleColorSizeWithPaddingY*3
 }

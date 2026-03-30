@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	screenWidth      = 1980
+	screenWidth      = 1980 * 2
 	screenHeight     = 1080
 	screenPixelSize  = 4
 	screenHeightHalf = screenHeight / 2
@@ -28,13 +28,11 @@ func main() {
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Symmetric Dynamic Texture in Go")
 	defer raylib.CloseWindow()
 
-	wallTexture := raylib.LoadTexture("repeat_triangle_64.png") // Loaded in GPU memory (VRAM)
+	wallTexture := raylib.LoadTexture("black_64.png") // Loaded in GPU memory (VRAM)
 	defer raylib.UnloadTexture(wallTexture)
-	wallImage := raylib.LoadImageFromTexture(wallTexture)      // Loaded in CPU memory (RAM)
-	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
-	defer raylib.UnloadImage(wallImage)
+
 	// Create a 2D array for the pixel data of one column
-	raylib.SetTargetFPS(30)
+	raylib.SetTargetFPS(5)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
@@ -71,7 +69,7 @@ func main() {
 	//scaleOnX := 0.01
 
 	// color picker
-	colorPicker := codingpixels.NewColorPicker(254, 4, 20, 1, 2, wallImage.Width+int32(offsetX*2), 0, 2)
+	colorPicker := codingpixels.NewColorPicker(254, 4, 20, 1, 2, 64+int32(offsetX*2), 0, 2)
 	//colorPickerSingleColorRectSizeX := float64(colorPicker.SingleColorRectSizeX)
 
 	// Define the camera to look into our 3d world
@@ -87,8 +85,11 @@ func main() {
 		Projection: raylib.CameraPerspective,
 	}
 	angle := 35.0
-
+	wallImage := raylib.LoadImageFromTexture(wallTexture)      // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
 	for !raylib.WindowShouldClose() {
+
+		defer raylib.UnloadImage(wallImage)
 
 		// Check if we point to pixelBuffer2
 		// Empty the other pixel buffer safely
@@ -207,7 +208,7 @@ func main() {
 		}
 
 		// Increase the angle (adjust speed as needed)
-		angle += 0.005
+		angle += 0.0005
 
 		// Calculate new camera position to orbit around the target (center)
 		radius := float32(4.0)
@@ -222,7 +223,7 @@ func main() {
 
 		raylib.EndDrawing()
 		raylib.UnloadTexture(imageBufferTexture)
-		raylib.UnloadImage(wallImage)
+		//raylib.UnloadImage(wallImage)
 	}
 }
 

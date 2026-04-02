@@ -28,11 +28,11 @@ func main() {
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Symmetric Dynamic Texture in Go")
 	defer raylib.CloseWindow()
 
-	wallTexture := raylib.LoadTexture("black_64.png") // Loaded in GPU memory (VRAM)
+	wallTexture := raylib.LoadTexture("question_32.png") // Loaded in GPU memory (VRAM)
 	defer raylib.UnloadTexture(wallTexture)
 
 	// Create a 2D array for the pixel data of one column
-	raylib.SetTargetFPS(5)
+	raylib.SetTargetFPS(15)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
@@ -67,9 +67,11 @@ func main() {
 	lastMouseAbsX := -1
 	lastMouseAbsY := -1
 	//scaleOnX := 0.01
-
+	textureScaleZoom := 8
+	wallImage := raylib.LoadImageFromTexture(wallTexture)      // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
 	// color picker
-	colorPicker := codingpixels.NewColorPicker(254, 4, 20, 1, 2, 64+int32(offsetX*2), 0, 2)
+	colorPicker := codingpixels.NewColorPicker(254, 4, 20, 1, 2, int32(textureScaleZoom)*wallImage.Width+int32(offsetX*2), 0, 2)
 	//colorPickerSingleColorRectSizeX := float64(colorPicker.SingleColorRectSizeX)
 
 	// Define the camera to look into our 3d world
@@ -85,8 +87,8 @@ func main() {
 		Projection: raylib.CameraPerspective,
 	}
 	angle := 35.0
-	wallImage := raylib.LoadImageFromTexture(wallTexture)      // Loaded in CPU memory (RAM)
-	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
+	editTextureYsizeScaled := textureScaleZoom * int(wallImage.Height)
+
 	for !raylib.WindowShouldClose() {
 
 		defer raylib.UnloadImage(wallImage)
@@ -100,7 +102,7 @@ func main() {
 		}
 
 		wallImageImage := wallImage.ToImage()
-		prefillBufferWithImage(offsetX, offsetY, wallImage, wallImageImage, currentPixelBuffer)
+		prefillBufferWithImage(offsetX, offsetY, textureScaleZoom, wallImage, wallImageImage, currentPixelBuffer)
 
 		// Color picker position
 		colorPicker.Render()
@@ -110,11 +112,21 @@ func main() {
 		mouseAbsY := int(raylib.GetMouseY())
 		//mouseButton1Pressed := raylib.IsMouseButtonPressed(raylib.MouseButtonLeft)
 		mouseButton1Down := raylib.IsMouseButtonDown(raylib.MouseButtonLeft)
+		mouseButton1Up := raylib.IsMouseButtonUp(raylib.MouseButtonLeft)
+		if mouseButton1Up {
+			lastMouseAbsX = -1
+			lastMouseAbsY = -1
+		}
 		mouseButton2Pressed := raylib.IsMouseButtonDown(raylib.MouseButtonRight)
 		if mouseButton1Down {
-			if mouseAbsX > 0 && mouseAbsX < int(wallImage.Width)+offsetX*2 && mouseAbsY > 0 && mouseAbsY < int(wallImage.Height)+offsetY {
+			if mouseAbsX > 0 && mouseAbsX < editTextureYsizeScaled+offsetX*2 && mouseAbsY > 0 && mouseAbsY < editTextureYsizeScaled+offsetY {
 				if lastMouseAbsX != -1 || lastMouseAbsY != -1 {
-					setLineColor(wallImage, lastMouseAbsX-offsetX, lastMouseAbsY-offsetY, mouseAbsX-offsetX, mouseAbsY-offsetY, colorPicker.GetPixelColor())
+					// reduce for scale
+					imageLastX := (lastMouseAbsX - offsetX) / textureScaleZoom
+					imageLastY := (lastMouseAbsY - offsetY) / textureScaleZoom
+					imageX := (mouseAbsX - offsetX) / textureScaleZoom
+					imageY := (mouseAbsY - offsetY) / textureScaleZoom
+					setLineColor(wallImage, imageLastX, imageLastY, imageX, imageY, colorPicker.GetPixelColor())
 				}
 				lastMouseAbsX = mouseAbsX
 				lastMouseAbsY = mouseAbsY
@@ -137,15 +149,15 @@ func main() {
 		raylib.DrawRectangle(
 			0,
 			0,
-			wallImage.Width+int32(2*offsetX),
-			2*wallImage.Height+int32(3*offsetX),
+			int32(editTextureYsizeScaled+2*offsetX),
+			int32(editTextureYsizeScaled+3*offsetX),
 			raylib.NewColor(60, 60, 60, 255),
 		)
 		// Currect color indicator
 		pixelColor := colorPicker.GetPixelColor()
 		raylib.DrawRectangle(
 			int32(offsetX),
-			wallImage.Height+int32(2*offsetY),
+			int32(editTextureYsizeScaled+2*offsetY),
 			wallImage.Width,
 			wallImage.Height,
 			raylib.NewColor(pixelColor.R, pixelColor.G, pixelColor.B, 255),
@@ -208,7 +220,7 @@ func main() {
 		}
 
 		// Increase the angle (adjust speed as needed)
-		angle += 0.0005
+		angle += 0.005
 
 		// Calculate new camera position to orbit around the target (center)
 		radius := float32(4.0)
@@ -294,34 +306,44 @@ func setPixelWhite(img *raylib.Image, x, y int, pixelColor codingpixels.PixelCol
 	for ixi, xi := range xs {
 		yi := ys[ixi]
 		index := (yi*width + xi) * bytesPerPixel
-		dataSlice[index] = byte(pixelColor.R)   //R
-		dataSlice[index+1] = byte(pixelColor.G) //G
-		dataSlice[index+2] = byte(pixelColor.B) //B
-		dataSlice[index+3] = 255                //A
+		dataSlice[index] = pixelColor.R   //R
+		dataSlice[index+1] = pixelColor.G //G
+		dataSlice[index+2] = pixelColor.B //B
+		dataSlice[index+3] = 255          //A
 
 		// flip rows and columns
 		index = (yi + xi*width) * bytesPerPixel
-		dataSlice[index] = byte(pixelColor.R)   //R
-		dataSlice[index+1] = byte(pixelColor.G) //G
-		dataSlice[index+2] = byte(pixelColor.B) //B
-		dataSlice[index+3] = 255                //A
+		dataSlice[index] = pixelColor.R   //R
+		dataSlice[index+1] = pixelColor.G //G
+		dataSlice[index+2] = pixelColor.B //B
+		dataSlice[index+3] = 255          //A
 
 	}
 }
 
-func prefillBufferWithImage(offsetX int, offsetY int, wallImage *raylib.Image, wallImageImage image.Image, currentPixelBuffer *[]uint32) {
+func prefillBufferWithImage(offsetX int, offsetY int, scale int, wallImage *raylib.Image, wallImageImage image.Image, currentPixelBuffer *[]uint32) {
 	for rayX := offsetX; rayX < int(wallImage.Width)+offsetX; rayX++ {
 		corX := int(int32(rayX)) - offsetX
 		for rayY := offsetY; rayY < int(wallImage.Height)+offsetY; rayY++ {
 			// Extract fill color and alpha
-			fillColor := wallImageImage.At(corX, int(int32(rayY))-offsetY)
+			corY := int(int32(rayY)) - offsetY
+			fillColor := wallImageImage.At(corX, corY)
 			r, g, b, a := fillColor.RGBA()
-			// Calculate scaling factor based on distance
-			//r, g, b = addPixelEffects(currentDistance, r, g, b, numberOfMirrorsInWay)
-
 			indexingCurrentPixelBuffer := *currentPixelBuffer
-			indexingCurrentPixelBuffer[rayX+renderWidth*rayY] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+			color := a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
+			scalePixel(indexingCurrentPixelBuffer, offsetX+corX*scale, offsetY+corY*scale, renderWidth, scale, color)
+		}
+	}
+}
 
+// scalePixel replicates a pixel at (startX, startY) into a block of size scale x scale
+func scalePixel(buffer []uint32, startX, startY, renderWidth, scale int, color uint32) {
+	for y := 0; y < scale; y++ {
+		for x := 0; x < scale; x++ {
+			offsetX := startX + x
+			offsetY := startY + y
+			index := offsetX + renderWidth*offsetY
+			buffer[index] = color
 		}
 	}
 }

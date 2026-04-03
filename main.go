@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	screenWidth      = 1980 * 2
+	screenWidth      = 1980 * 1.5
 	screenHeight     = 1080
 	screenPixelSize  = 4
 	screenHeightHalf = screenHeight / 2
@@ -149,7 +149,7 @@ func main() {
 			0,
 			0,
 			int32(editTextureYsizeScaled+2*offsetX),
-			int32(editTextureYsizeScaled+3*offsetX),
+			int32(editTextureYsizeScaled+5*offsetY),
 			raylib.NewColor(60, 60, 60, 255),
 		)
 		// Currect color indicator
@@ -157,7 +157,7 @@ func main() {
 		raylib.DrawRectangle(
 			int32(offsetX),
 			int32(editTextureYsizeScaled+2*offsetY),
-			wallImage.Width,
+			int32(textureScaleZoom)*wallImage.Width,
 			wallImage.Height,
 			raylib.NewColor(pixelColor.R, pixelColor.G, pixelColor.B, 255),
 		)

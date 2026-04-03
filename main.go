@@ -68,13 +68,12 @@ func main() {
 	lastMouseAbsY := -1
 	//scaleOnX := 0.01
 	textureScaleZoom := 8
-	wallImage := raylib.LoadImageFromTexture(wallTexture)      // Loaded in CPU memory (RAM)
-	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8a8) // Format image to RGBA 32bit (required for texture update)
+	wallImage := raylib.LoadImageFromTexture(wallTexture)    // Loaded in CPU memory (RAM)
+	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8) // Format image to RGB 24bit (no alpha channel)
 	// color picker
 	colorPicker := codingpixels.NewColorPicker(254, 4, 20, 1, 2, int32(textureScaleZoom)*wallImage.Width+int32(offsetX*2), 0, 2)
 	//colorPickerSingleColorRectSizeX := float64(colorPicker.SingleColorRectSizeX)
 
-	// Define the camera to look into our 3d world
 	// Define the camera to look into our 3d world
 	camera := raylib.Camera{
 		Position: raylib.Vector3{
@@ -296,7 +295,7 @@ func setPixelWhite(img *raylib.Image, x, y int, pixelColor codingpixels.PixelCol
 	}
 
 	width, height := int(img.Width), int(img.Height)
-	bytesPerPixel := 4
+	bytesPerPixel := 3
 
 	dataSlice := (*[1 << 30]byte)(img.Data)[: width*height*bytesPerPixel : width*height*bytesPerPixel]
 
@@ -309,14 +308,14 @@ func setPixelWhite(img *raylib.Image, x, y int, pixelColor codingpixels.PixelCol
 		dataSlice[index] = pixelColor.R   //R
 		dataSlice[index+1] = pixelColor.G //G
 		dataSlice[index+2] = pixelColor.B //B
-		dataSlice[index+3] = 255          //A
+		//dataSlice[index+3] = 255          //A
 
 		// flip rows and columns
 		index = (yi + xi*width) * bytesPerPixel
 		dataSlice[index] = pixelColor.R   //R
 		dataSlice[index+1] = pixelColor.G //G
 		dataSlice[index+2] = pixelColor.B //B
-		dataSlice[index+3] = 255          //A
+		//dataSlice[index+3] = 255          //A
 
 	}
 }

@@ -28,11 +28,11 @@ func main() {
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Symmetric Dynamic Texture in Go")
 	defer raylib.CloseWindow()
 
-	wallTexture := raylib.LoadTexture("question_32.png") // Loaded in GPU memory (VRAM)
+	wallTexture := raylib.LoadTexture("32x32.png") // Loaded in GPU memory (VRAM)
 	defer raylib.UnloadTexture(wallTexture)
 
 	// Create a 2D array for the pixel data of one column
-	raylib.SetTargetFPS(15)
+	raylib.SetTargetFPS(120)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
@@ -219,7 +219,7 @@ func main() {
 		}
 
 		// Increase the angle (adjust speed as needed)
-		angle += 0.005
+		angle += 0.001
 
 		// Calculate new camera position to orbit around the target (center)
 		radius := float32(4.0)

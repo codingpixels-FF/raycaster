@@ -3,28 +3,45 @@ package main
 import (
 	"coding-pixels/raycasting/codingpixels"
 	"fmt"
-	"image"
+	"image/color"
 	"math"
 	"unsafe"
 
 	raylib "github.com/gen2brain/raylib-go/raylib"
 )
 
-const (
-	screenWidth      = 1980 * 1.5
-	screenHeight     = 1080
+var (
+	screenWidth      int32
+	screenHeight     int32
 	screenPixelSize  = 4
-	screenHeightHalf = screenHeight / 2
-	statusBarHeight  = screenHeight / 2
-	renderWidth      = screenWidth / 1
-	renderHeight     = screenHeight / 1
-	renderHeightHalf = renderHeight / 2
+	screenHeightHalf int32
+	statusBarHeight  int32
+	renderWidth      int32
+	renderHeight     int32
+	renderHeightHalf int32
 )
 
 func main() {
 	// Set the maximum number of CPU cores to use
 	// Set to debug or trace level for detailed logs
 	raylib.SetTraceLogLevel(raylib.LogError)
+	// Get user resolution, for example:
+	currentMonitor := raylib.GetCurrentMonitor()
+	screenWidth = int32(raylib.GetMonitorWidth(currentMonitor))
+	if screenWidth == 0 {
+		screenWidth = 1800
+	}
+	screenHeight = int32(raylib.GetMonitorHeight(currentMonitor))
+	if screenHeight == 0 {
+		screenHeight = 768
+	}
+	// Recalculate dependent values
+	screenHeightHalf = screenHeight / 2
+	statusBarHeight = screenHeight / 2
+	renderWidth = screenWidth
+	renderHeight = screenHeight
+	renderHeightHalf = renderHeight / 2
+
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Symmetric Dynamic Texture in Go")
 	defer raylib.CloseWindow()
 
@@ -34,14 +51,9 @@ func main() {
 	// Create a 2D array for the pixel data of one column
 	raylib.SetTargetFPS(120)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
-	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
-	currentPixelBuffer := &pixelBuffer1
-
-	// render
-	dataPtr := unsafe.Pointer(&(*currentPixelBuffer)[0])
 
 	img := raylib.Image{
-		Data:    dataPtr,
+		Data:    unsafe.Pointer(&pixelBuffer1[0]),
 		Width:   renderWidth,
 		Height:  renderHeight,
 		Mipmaps: 1,
@@ -51,28 +63,28 @@ func main() {
 	finalRenderRectagle := raylib.Rectangle{
 		X:      0,
 		Y:      0,
-		Width:  screenWidth,
-		Height: screenHeight,
+		Width:  float32(screenWidth),
+		Height: float32(screenHeight),
 	}
 
 	textureRectangle := raylib.Rectangle{
 		X:      0,
 		Y:      0,
-		Width:  renderWidth,
-		Height: renderHeight,
+		Width:  float32(renderWidth),
+		Height: float32(renderHeight),
 	}
 
 	offsetX := 20
 	offsetY := 20
 	lastMouseAbsX := -1
 	lastMouseAbsY := -1
-	//scaleOnX := 0.01
 	textureScaleZoom := 8
-	wallImage := raylib.LoadImageFromTexture(wallTexture)    // Loaded in CPU memory (RAM)
+	wallImage := raylib.LoadImageFromTexture(wallTexture) // Loaded in CPU memory (RAM)
+	defer raylib.UnloadImage(wallImage)
+
 	raylib.ImageFormat(wallImage, raylib.UncompressedR8g8b8) // Format image to RGB 24bit (no alpha channel)
 	// color picker
 	colorPicker := codingpixels.NewColorPicker(254, 4, 20, 1, 2, int32(textureScaleZoom)*wallImage.Width+int32(offsetX*2), 0, 2)
-	//colorPickerSingleColorRectSizeX := float64(colorPicker.SingleColorRectSizeX)
 
 	// Define the camera to look into our 3d world
 	camera := raylib.Camera{
@@ -88,20 +100,11 @@ func main() {
 	angle := 35.0
 	editTextureYsizeScaled := textureScaleZoom * int(wallImage.Height)
 
+	imageBufferTexture := raylib.LoadTextureFromImage(&img)
+
 	for !raylib.WindowShouldClose() {
 
-		defer raylib.UnloadImage(wallImage)
-
-		// Check if we point to pixelBuffer2
-		// Empty the other pixel buffer safely
-		if &(*currentPixelBuffer)[0] == &pixelBuffer2[0] {
-			currentPixelBuffer = &pixelBuffer1
-		} else {
-			currentPixelBuffer = &pixelBuffer2
-		}
-
-		wallImageImage := wallImage.ToImage()
-		prefillBufferWithImage(offsetX, offsetY, textureScaleZoom, wallImage, wallImageImage, currentPixelBuffer)
+		prefillBufferWithImage(offsetX, offsetY, textureScaleZoom, wallImage, &pixelBuffer1)
 
 		// Color picker position
 		colorPicker.Render()
@@ -109,7 +112,6 @@ func main() {
 		// Mouse
 		mouseAbsX := int(raylib.GetMouseX())
 		mouseAbsY := int(raylib.GetMouseY())
-		//mouseButton1Pressed := raylib.IsMouseButtonPressed(raylib.MouseButtonLeft)
 		mouseButton1Down := raylib.IsMouseButtonDown(raylib.MouseButtonLeft)
 		mouseButton1Up := raylib.IsMouseButtonUp(raylib.MouseButtonLeft)
 		if mouseButton1Up {
@@ -162,20 +164,10 @@ func main() {
 			raylib.NewColor(pixelColor.R, pixelColor.G, pixelColor.B, 255),
 		)
 
-		// Switch the image buffer
-		dataPtr = unsafe.Pointer(&(*currentPixelBuffer)[0])
-		img = raylib.Image{
-			Data:    dataPtr,
-			Width:   renderWidth,
-			Height:  renderHeight,
-			Mipmaps: 1,
-			Format:  raylib.UncompressedR8g8b8a8,
-		}
-
-		imageBufferTexture := raylib.LoadTextureFromImage(&img)
-
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.NewColor(0, 0, 0, 255))
+
+		raylib.UpdateTexture(imageBufferTexture, uint32SliceToRGBA2(pixelBuffer1))
 		raylib.DrawTexturePro(imageBufferTexture, textureRectangle, finalRenderRectagle, raylib.Vector2{}, 0, raylib.White)
 
 		// status bar overlay
@@ -190,9 +182,7 @@ func main() {
 		raylib.DrawFPS(screenWidth-100, screenHeight+150)
 
 		raylib.BeginMode3D(camera)
-
 		// Draw cube with an applied texture
-
 		currentTexture := raylib.LoadTextureFromImage(wallImage)
 
 		for xx := float32(-1.0); xx <= 1.0; xx = xx + 1.0 {
@@ -217,7 +207,6 @@ func main() {
 				DrawCubeTexture(currentTexture, vec, 1.0, 1.0, 1.0, raylib.White)
 			}
 		}
-
 		// Increase the angle (adjust speed as needed)
 		angle += 0.001
 
@@ -227,14 +216,12 @@ func main() {
 		camera.Position.Z = float32(math.Sin(float64(angle))) * radius
 		camera.Position.Y = 3.5 // Keep height constant, or change for a different effect
 
-		camera.Target = raylib.Vector3{0, 0, 0}
+		camera.Target = raylib.Vector3{0, 0.1, 0}
 
 		//raylib.DrawGrid(10, 1.0) // Draw a grid
 		raylib.EndMode3D()
 
 		raylib.EndDrawing()
-		raylib.UnloadTexture(imageBufferTexture)
-		//raylib.UnloadImage(wallImage)
 	}
 }
 
@@ -320,7 +307,8 @@ func setPixelWhite(img *raylib.Image, x, y int, pixelColor codingpixels.PixelCol
 	}
 }
 
-func prefillBufferWithImage(offsetX int, offsetY int, scale int, wallImage *raylib.Image, wallImageImage image.Image, currentPixelBuffer *[]uint32) {
+func prefillBufferWithImage(offsetX int, offsetY int, scale int, wallImage *raylib.Image, currentPixelBuffer *[]uint32) {
+	wallImageImage := wallImage.ToImage()
 	for rayX := offsetX; rayX < int(wallImage.Width)+offsetX; rayX++ {
 		corX := int(int32(rayX)) - offsetX
 		for rayY := offsetY; rayY < int(wallImage.Height)+offsetY; rayY++ {
@@ -330,7 +318,7 @@ func prefillBufferWithImage(offsetX int, offsetY int, scale int, wallImage *rayl
 			r, g, b, a := fillColor.RGBA()
 			indexingCurrentPixelBuffer := *currentPixelBuffer
 			color := a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
-			scalePixel(indexingCurrentPixelBuffer, offsetX+corX*scale, offsetY+corY*scale, renderWidth, scale, color)
+			scalePixel(indexingCurrentPixelBuffer, offsetX+corX*scale, offsetY+corY*scale, int(renderWidth), scale, color)
 		}
 	}
 }
@@ -423,4 +411,18 @@ func DrawCubeTexture(texture raylib.Texture2D, position raylib.Vector3, width, h
 	raylib.End()
 
 	raylib.SetTexture(0)
+}
+
+// Convert []uint32 to []color.RGBA without copying
+func uint32SliceToRGBA2(slice []uint32) []color.RGBA {
+	rgba := make([]color.RGBA, len(slice))
+	for i, v := range slice {
+		rgba[i] = color.RGBA{
+			A: uint8(v >> 24),
+			B: uint8(v >> 16),
+			G: uint8(v >> 8),
+			R: uint8(v),
+		}
+	}
+	return rgba
 }

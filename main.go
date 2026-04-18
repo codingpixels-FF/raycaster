@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"image"
+	"image/color"
 	"math"
 	"math/rand"
 	"os"
+	"reflect"
 	_ "strconv"
 	"sync"
 	"unsafe"
@@ -470,7 +472,7 @@ func main() {
 	// Camera settings
 	fov := math.Pi / 2.0 // 90 degrees
 
-	raylib.SetTargetFPS(20)
+	raylib.SetTargetFPS(240)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
@@ -513,6 +515,18 @@ func main() {
 		Width:  256,
 		Height: 256,
 	}
+
+	// Switch the image buffer
+	dataPtr = unsafe.Pointer(&(*currentPixelBuffer)[0])
+	img = raylib.Image{
+		Data:    dataPtr,
+		Width:   renderWidth,
+		Height:  renderHeight,
+		Mipmaps: 1,
+		Format:  raylib.UncompressedR8g8b8a8,
+	}
+
+	imageBufferTexture := raylib.LoadTextureFromImage(&img)
 
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup
@@ -675,18 +689,8 @@ func main() {
 		// Close channel once all goroutines are done
 		wg.Wait()
 
-		// Switch the image buffer
-		dataPtr = unsafe.Pointer(&(*currentPixelBuffer)[0])
-		img = raylib.Image{
-			Data:    dataPtr,
-			Width:   renderWidth,
-			Height:  renderHeight,
-			Mipmaps: 1,
-			Format:  raylib.UncompressedR8g8b8a8,
-		}
-
-		imageBufferTexture := raylib.LoadTextureFromImage(&img)
-		defer raylib.UnloadImage(&img)
+		raylib.UpdateTexture(imageBufferTexture, uint32SliceToRGBA2(*currentPixelBuffer))
+		//defer raylib.UnloadImage(&img)
 
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.NewColor(0, 0, 0, 255))
@@ -705,6 +709,29 @@ func main() {
 		raylib.DrawFPS(screenWidth-90, screenHeight+10)
 
 		raylib.EndDrawing()
-		raylib.UnloadTexture(imageBufferTexture)
+		//raylib.UnloadTexture(imageBufferTexture)
 	}
+}
+
+func uint32SliceToRGBA(slice []uint32) []color.RGBA {
+	var rgbaSlice []color.RGBA
+	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&rgbaSlice))
+	hdr.Data = uintptr(unsafe.Pointer(&slice[0]))
+	hdr.Len = len(slice)
+	hdr.Cap = len(slice)
+	return rgbaSlice
+}
+
+// Convert []uint32 to []color.RGBA without copying
+func uint32SliceToRGBA2(slice []uint32) []color.RGBA {
+	rgba := make([]color.RGBA, len(slice))
+	for i, v := range slice {
+		rgba[i] = color.RGBA{
+			A: uint8(v >> 24),
+			B: uint8(v >> 16),
+			G: uint8(v >> 8),
+			R: uint8(v),
+		}
+	}
+	return rgba
 }

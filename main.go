@@ -528,6 +528,10 @@ func main() {
 
 	imageBufferTexture := raylib.LoadTextureFromImage(&img)
 
+	raylib.HideCursor()
+	raylib.DisableCursor()
+	raylib.SetMousePosition(screenWidth/2, screenHeight/2)
+
 	for !raylib.WindowShouldClose() {
 		var wg sync.WaitGroup
 		// Check if we point to pixelBuffer2
@@ -553,8 +557,10 @@ func main() {
 		}
 
 		// Mouse
+
 		deltaX := float64(raylib.GetMouseDelta().X)
 		player.angle += deltaX * 0.01
+		raylib.SetMousePosition(screenWidth/2, screenHeight/2)
 
 		// Keyboard
 		// Turn left

@@ -122,7 +122,7 @@ func castRay(rayX float64, rayY float64, rayAngleRadians float64) []ZBufferItem 
 	NumberOfMirrorsInWay := 0
 	for rayX >= 0 && rayX < float64(mapWidth) && rayY >= 0 && rayY < float64(mapHeight) {
 		totalDepth += depth
-		if totalDepth > 30 {
+		if totalDepth > 30 || NumberOfMirrorsInWay > 3 {
 			return zbufferSlice
 		}
 		rayX += deltaX
@@ -239,7 +239,7 @@ const (
 	screenHeightHalf      = screenHeight / 2
 	statusBarHeight       = screenHeight / 5
 	renderWidth           = screenWidth / 4
-	renderHeight          = screenHeight / 2
+	renderHeight          = screenHeight / 4
 	renderHeightHalf      = renderHeight / 2
 	depthStepLowDetail    = 0.01
 	depthStepMediumDetail = 0.007
@@ -472,7 +472,7 @@ func main() {
 	// Camera settings
 	fov := math.Pi / 2.0 // 90 degrees
 
-	raylib.SetTargetFPS(240)
+	raylib.SetTargetFPS(30)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1

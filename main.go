@@ -578,28 +578,51 @@ func main() {
 			factor = 0.5
 		}
 
+		futurePlayerDeltaX := 0.0
+		futurePlayerDeltaY := 0.0
 		// Forward
 		if raylib.IsKeyDown(raylib.KeyW) {
-			player.x += factor * math.Cos(player.angle)
-			player.y += factor * math.Sin(player.angle)
+			futurePlayerDeltaX += factor * math.Cos(player.angle)
+			futurePlayerDeltaY += factor * math.Sin(player.angle)
 		}
 
 		// Backward
 		if raylib.IsKeyDown(raylib.KeyS) {
-			player.x -= factor * math.Cos(player.angle)
-			player.y -= factor * math.Sin(player.angle)
+			futurePlayerDeltaX -= factor * math.Cos(player.angle)
+			futurePlayerDeltaY -= factor * math.Sin(player.angle)
 		}
 
 		// Strafe left
 		if raylib.IsKeyDown(raylib.KeyA) {
-			player.x += factor * math.Cos(player.angle-math.Pi/2)
-			player.y += factor * math.Sin(player.angle-math.Pi/2)
+			futurePlayerDeltaX += factor * math.Cos(player.angle-math.Pi/2)
+			futurePlayerDeltaY += factor * math.Sin(player.angle-math.Pi/2)
 		}
 
 		// Strafe right
 		if raylib.IsKeyDown(raylib.KeyD) {
-			player.x += factor * math.Cos(player.angle+math.Pi/2)
-			player.y += factor * math.Sin(player.angle+math.Pi/2)
+			futurePlayerDeltaX += factor * math.Cos(player.angle+math.Pi/2)
+			futurePlayerDeltaY += factor * math.Sin(player.angle+math.Pi/2)
+		}
+
+		futurePlayerAbsX := player.x + futurePlayerDeltaX
+		futurePlayerAbsY := player.y + futurePlayerDeltaY
+		isCollisionXFree := true
+		isCollisionYFree := true
+		mapX := int(futurePlayerAbsX)
+		mapY := int(player.y)
+		if mapData[mapY][mapX] == 1 {
+			isCollisionXFree = false
+		}
+		mapY = int(futurePlayerAbsY)
+		if mapData[mapY][mapX] == 1 {
+			isCollisionYFree = false
+		}
+
+		if isCollisionXFree {
+			player.x = futurePlayerAbsX
+		}
+		if isCollisionYFree {
+			player.y = futurePlayerAbsY
 		}
 
 		for ray := 0; ray < renderWidth; ray++ {

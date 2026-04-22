@@ -238,8 +238,8 @@ const (
 	screenHeight          = 1080
 	screenHeightHalf      = screenHeight / 2
 	statusBarHeight       = screenHeight / 5
-	renderWidth           = screenWidth / 4
-	renderHeight          = screenHeight / 4
+	renderWidth           = screenWidth / 2
+	renderHeight          = screenHeight / 2
 	renderHeightHalf      = renderHeight / 2
 	depthStepLowDetail    = 0.01
 	depthStepMediumDetail = 0.007
@@ -435,6 +435,9 @@ func main() {
 
 	playerHandsTexture := raylib.LoadTexture("256_sorcerer1_hand.png")
 	defer raylib.UnloadTexture(playerHandsTexture)
+
+	playerHand2Texture := raylib.LoadTexture("256_sorcerer1_hand2.png")
+	defer raylib.UnloadTexture(playerHand2Texture)
 	//playerHandsImage := raylib.LoadImageFromTexture(playerHandsTexture) // Loaded in CPU memory (RAM)
 	//raylib.ImageFormat(playerHandsImage, raylib.UncompressedR8g8b8a8)   // Format image to RGBA 32bit (required for texture update)
 	//defer raylib.UnloadImage(playerHandsImage)
@@ -511,6 +514,20 @@ func main() {
 	}
 
 	playerHandstextureRectangle := raylib.Rectangle{
+		X:      0,
+		Y:      0,
+		Width:  256,
+		Height: 256,
+	}
+
+	playerHand2RanderRectagle := raylib.Rectangle{
+		X:      screenWidth/2 + 200,
+		Y:      screenHeight / 2,
+		Width:  screenWidth / 4,
+		Height: screenHeight / 2,
+	}
+
+	playerHand2textureRectangle := raylib.Rectangle{
 		X:      0,
 		Y:      0,
 		Width:  256,
@@ -777,6 +794,8 @@ func main() {
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.NewColor(0, 0, 0, 255))
 		raylib.DrawTexturePro(imageBufferTexture, textureRectangle, finalRenderRectagle, raylib.Vector2{}, 0, raylib.White)
+
+		raylib.DrawTexturePro(playerHand2Texture, playerHand2textureRectangle, playerHand2RanderRectagle, raylib.Vector2{}, 0, raylib.White)
 		if raylib.IsKeyDown(raylib.KeySpace) {
 			raylib.DrawTexturePro(playerHandsTexture, playerHandstextureRectangle, playerHandRanderRectagle, raylib.Vector2{}, 0, raylib.White)
 		}

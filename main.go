@@ -408,6 +408,7 @@ func main() {
 	// Set to debug or trace level for detailed logs
 	raylib.SetTraceLogLevel(raylib.LogError)
 	raylib.InitWindow(screenWidth, screenHeight+statusBarHeight, "Raycasting in Go")
+
 	defer raylib.CloseWindow()
 
 	wallTexture := raylib.LoadTexture("wall_all_small.png") // Loaded in GPU memory (VRAM)
@@ -472,7 +473,7 @@ func main() {
 	// Camera settings
 	fov := math.Pi / 2.0 // 90 degrees
 
-	raylib.SetTargetFPS(30)
+	raylib.SetTargetFPS(75)
 	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
 	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
@@ -602,6 +603,10 @@ func main() {
 		if raylib.IsKeyDown(raylib.KeyD) {
 			futurePlayerDeltaX += math.Cos(player.angle + math.Pi/2)
 			futurePlayerDeltaY += math.Sin(player.angle + math.Pi/2)
+		}
+
+		if raylib.IsKeyDown(raylib.KeyLeftAlt) && raylib.IsKeyDown(raylib.KeyEnter) {
+			raylib.ToggleFullscreen()
 		}
 		playerPadding := 0.35
 		directionXNorm := futurePlayerDeltaX

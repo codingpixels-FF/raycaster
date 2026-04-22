@@ -426,7 +426,7 @@ func main() {
 	defer raylib.UnloadImage(wizardImage)
 	wizardImageImage := wizardImage.ToImage()
 
-	playerFrontTexture := raylib.LoadTexture("256_sorcerer1.png")
+	playerFrontTexture := raylib.LoadTexture("256_dukenukem.png")
 	defer raylib.UnloadTexture(playerFrontTexture)
 	playerFrontImage := raylib.LoadImageFromTexture(playerFrontTexture) // Loaded in CPU memory (RAM)
 	raylib.ImageFormat(playerFrontImage, raylib.UncompressedR8g8b8a8)   // Format image to RGBA 32bit (required for texture update)
@@ -504,7 +504,7 @@ func main() {
 	}
 
 	playerHandRanderRectagle := raylib.Rectangle{
-		X:      screenWidth / 2,
+		X:      screenWidth / 3,
 		Y:      0,
 		Width:  screenWidth / 2,
 		Height: screenHeight,
@@ -608,11 +608,21 @@ func main() {
 		if raylib.IsKeyDown(raylib.KeyLeftAlt) && raylib.IsKeyDown(raylib.KeyEnter) {
 			raylib.ToggleFullscreen()
 		}
+
 		playerPadding := 0.35
 		directionXNorm := futurePlayerDeltaX
 		directionYNorm := futurePlayerDeltaY
 		futurePlayerAbsX := player.x + directionXNorm*factor
 		futurePlayerAbsY := player.y + directionYNorm*factor
+
+		if raylib.IsKeyDown(raylib.KeySpace) {
+			mapX := int(player.x + math.Cos(player.angle)*(playerPadding+0.2))
+			mapY := int(player.y + math.Sin(player.angle)*(playerPadding+0.2))
+			mapTileIndex := mapData[mapY][mapX]
+			if mapTileIndex >= 1 {
+				mapData[mapY][mapX] = 0
+			}
+		}
 
 		/*
 			Checking for collision around player
@@ -767,8 +777,9 @@ func main() {
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.NewColor(0, 0, 0, 255))
 		raylib.DrawTexturePro(imageBufferTexture, textureRectangle, finalRenderRectagle, raylib.Vector2{}, 0, raylib.White)
-
-		raylib.DrawTexturePro(playerHandsTexture, playerHandstextureRectangle, playerHandRanderRectagle, raylib.Vector2{}, 0, raylib.White)
+		if raylib.IsKeyDown(raylib.KeySpace) {
+			raylib.DrawTexturePro(playerHandsTexture, playerHandstextureRectangle, playerHandRanderRectagle, raylib.Vector2{}, 0, raylib.White)
+		}
 
 		// status bar overlay
 		raylib.DrawRectangle(0, screenHeight, screenWidth, screenHeight+10, raylib.NewColor(0, 0, 128, 255))

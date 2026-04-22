@@ -603,13 +603,11 @@ func main() {
 			futurePlayerDeltaX += math.Cos(player.angle + math.Pi/2)
 			futurePlayerDeltaY += math.Sin(player.angle + math.Pi/2)
 		}
-		playerPadding := 0.3
+		playerPadding := 0.35
 		directionXNorm := futurePlayerDeltaX
 		directionYNorm := futurePlayerDeltaY
 		futurePlayerAbsX := player.x + directionXNorm*factor
 		futurePlayerAbsY := player.y + directionYNorm*factor
-		isCollisionXFree := true
-		isCollisionYFree := true
 
 		/*
 			Checking for collision around player
@@ -617,26 +615,46 @@ func main() {
 			*P*
 			***
 		*/
-		for paddingY := -playerPadding; paddingY <= playerPadding; paddingY += 2 * playerPadding {
-			for paddingX := -playerPadding; paddingX <= playerPadding; paddingX += 2 * playerPadding {
-				mapX := int(futurePlayerAbsX + paddingX)
-				mapY := int(player.y + paddingY)
-				if mapX >= 0 && mapY >= 0 {
-					if mapData[mapY][mapX] == 1 {
-						isCollisionXFree = false
-					}
-				}
+		isCollisionXFree := true
+		isCollisionYFree := true
+		for {
+			countOfCollision := 0
+			for paddingY := -playerPadding; paddingY <= playerPadding; paddingY += 2 * playerPadding {
+				for paddingX := -playerPadding; paddingX <= playerPadding; paddingX += 2 * playerPadding {
+					mapX := int(futurePlayerAbsX + paddingX)
+					mapY := int(player.y + paddingY)
 
-				mapX = int(player.x + paddingX)
-				mapY = int(futurePlayerAbsY + paddingY)
-				if mapX >= 0 && mapY >= 0 {
-					if mapData[mapY][mapX] == 1 {
-						isCollisionYFree = false
+					mapTileIndex := mapData[mapY][mapX]
+					if mapTileIndex != 0 {
+						isCollisionXFree = false
+						countOfCollision += 1
 					}
+
+					mapX = int(player.x + paddingX)
+					mapY = int(futurePlayerAbsY + paddingY)
+					mapTileIndex = mapData[mapY][mapX]
+					if mapTileIndex != 0 {
+						isCollisionYFree = false
+						countOfCollision += 1
+					}
+
 				}
 			}
+			// if both false, jump around in order not to get stuck on the edge
+			if isCollisionXFree || isCollisionYFree {
+				break
+			} else if countOfCollision == 2 { // Edge only
+				// move player back and let him move only on one axis (Y)
+				println("Collision XY Free")
+				player.x -= futurePlayerDeltaX * factor
+				player.y -= futurePlayerDeltaY * factor
+				isCollisionYFree = true
+				break
+			} else {
+				// not on the edge, player is stuck correctly behind walls
+				break
+			}
 		}
-		// if both false, jump around in order not to get stuck on the edge
 
 		if isCollisionXFree {
 			player.x = futurePlayerAbsX

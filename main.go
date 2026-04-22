@@ -582,41 +582,61 @@ func main() {
 		futurePlayerDeltaY := 0.0
 		// Forward
 		if raylib.IsKeyDown(raylib.KeyW) {
-			futurePlayerDeltaX += factor * math.Cos(player.angle)
-			futurePlayerDeltaY += factor * math.Sin(player.angle)
+			futurePlayerDeltaX += math.Cos(player.angle)
+			futurePlayerDeltaY += math.Sin(player.angle)
 		}
 
 		// Backward
 		if raylib.IsKeyDown(raylib.KeyS) {
-			futurePlayerDeltaX -= factor * math.Cos(player.angle)
-			futurePlayerDeltaY -= factor * math.Sin(player.angle)
+			futurePlayerDeltaX -= math.Cos(player.angle)
+			futurePlayerDeltaY -= math.Sin(player.angle)
 		}
 
 		// Strafe left
 		if raylib.IsKeyDown(raylib.KeyA) {
-			futurePlayerDeltaX += factor * math.Cos(player.angle-math.Pi/2)
-			futurePlayerDeltaY += factor * math.Sin(player.angle-math.Pi/2)
+			futurePlayerDeltaX += math.Cos(player.angle - math.Pi/2)
+			futurePlayerDeltaY += math.Sin(player.angle - math.Pi/2)
 		}
 
 		// Strafe right
 		if raylib.IsKeyDown(raylib.KeyD) {
-			futurePlayerDeltaX += factor * math.Cos(player.angle+math.Pi/2)
-			futurePlayerDeltaY += factor * math.Sin(player.angle+math.Pi/2)
+			futurePlayerDeltaX += math.Cos(player.angle + math.Pi/2)
+			futurePlayerDeltaY += math.Sin(player.angle + math.Pi/2)
 		}
-
-		futurePlayerAbsX := player.x + futurePlayerDeltaX
-		futurePlayerAbsY := player.y + futurePlayerDeltaY
+		playerPadding := 0.3
+		directionXNorm := futurePlayerDeltaX
+		directionYNorm := futurePlayerDeltaY
+		futurePlayerAbsX := player.x + directionXNorm*factor
+		futurePlayerAbsY := player.y + directionYNorm*factor
 		isCollisionXFree := true
 		isCollisionYFree := true
-		mapX := int(futurePlayerAbsX)
-		mapY := int(player.y)
-		if mapData[mapY][mapX] == 1 {
-			isCollisionXFree = false
+
+		/*
+			Checking for collision around player
+			***
+			*P*
+			***
+		*/
+		for paddingY := -playerPadding; paddingY <= playerPadding; paddingY += 2 * playerPadding {
+			for paddingX := -playerPadding; paddingX <= playerPadding; paddingX += 2 * playerPadding {
+				mapX := int(futurePlayerAbsX + paddingX)
+				mapY := int(player.y + paddingY)
+				if mapX >= 0 && mapY >= 0 {
+					if mapData[mapY][mapX] == 1 {
+						isCollisionXFree = false
+					}
+				}
+
+				mapX = int(player.x + paddingX)
+				mapY = int(futurePlayerAbsY + paddingY)
+				if mapX >= 0 && mapY >= 0 {
+					if mapData[mapY][mapX] == 1 {
+						isCollisionYFree = false
+					}
+				}
+			}
 		}
-		mapY = int(futurePlayerAbsY)
-		if mapData[mapY][mapX] == 1 {
-			isCollisionYFree = false
-		}
+		// if both false, jump around in order not to get stuck on the edge
 
 		if isCollisionXFree {
 			player.x = futurePlayerAbsX

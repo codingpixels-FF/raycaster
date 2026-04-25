@@ -238,8 +238,8 @@ const (
 	screenHeight          = 1080
 	screenHeightHalf      = screenHeight / 2
 	statusBarHeight       = screenHeight / 5
-	renderWidth           = screenWidth / 2
-	renderHeight          = screenHeight / 2
+	renderWidth           = screenWidth / 4
+	renderHeight          = screenHeight / 4
 	renderHeightHalf      = renderHeight / 2
 	depthStepLowDetail    = 0.01
 	depthStepMediumDetail = 0.007
@@ -444,8 +444,8 @@ func main() {
 
 	// Player
 	player := Player{
-		x:     15.5,
-		y:     1.5,
+		x:     6.5,
+		y:     6.5,
 		angle: math.Pi / 2, // looking straight ahead
 	}
 

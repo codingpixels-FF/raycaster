@@ -6,7 +6,7 @@ import (
 	"image"
 	"image/color"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"reflect"
 	_ "strconv"
@@ -252,6 +252,11 @@ type Player struct {
 	angle float64 // direction angle
 }
 
+type Config struct {
+	isPerspectiveCorrectionOn bool
+	isCRTShaderOn             bool
+}
+
 func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hitX float64, hitY float64, wallHeightHalfLast int, wallHeightHalfCurrent int, rayX int, numberOfMirrorsInWay int, currentDistance float64) {
 	// hitX is from 0-1
 	// hitY is from 0-1
@@ -266,8 +271,8 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	// Calculate scaling factor based on distance
 	r, g, b = addPixelEffects(currentDistance, r, g, b, numberOfMirrorsInWay)
 	//fillColorUint32 := a>>8<<24 | r>>8<<16 | g>>8<<8 | b>>8 bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
-	fillColorCeilingUint32 := a>>8<<24 | b/4>>8<<16 | g/4>>8<<8 | r/4>>8
-	fillColorFloorUint32 := a>>8<<24 | b/2>>8<<16 | g/2>>8<<8 | r/2>>8
+	//fillColorCeilingUint32 := a>>8<<24 | b/4>>8<<16 | g/4>>8<<8 | r/4>>8
+	//fillColorFloorUint32 := a>>8<<24 | b/2>>8<<16 | g/2>>8<<8 | r/2>>8
 
 	floorStartY := renderHeightHalf + wallHeightHalfLast
 	floorEndY := renderHeightHalf + wallHeightHalfCurrent
@@ -281,7 +286,11 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 		if y >= renderHeight {
 			break // too close to the camera
 		}
-		bufferImage[rayX+renderWidth*y] = fillColorFloorUint32
+		//bufferImage[rayX+renderWidth*y] = fillColorFloorUint32
+		bufferImage[rayX+renderWidth*3*y] = a>>8<<24 | 0>>8<<16 | 0>>8<<8 | r/2>>8
+		bufferImage[rayX+renderWidth*3*y+1] = a>>8<<24 | 0>>8<<16 | g/2>>8<<8 | 0>>8
+		bufferImage[rayX+renderWidth*3*y+2] = a>>8<<24 | b/2>>8<<16 | 0>>8<<8 | 0>>8
+
 	}
 
 	for y := ceilingStartY; y < ceilingEndY; y++ {
@@ -291,7 +300,10 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 		if y < 0 {
 			break // too close to the camera
 		}
-		bufferImage[rayX+renderWidth*y] = fillColorCeilingUint32
+		//bufferImage[rayX+renderWidth*y] = fillColorCeilingUint32
+		bufferImage[rayX+renderWidth*3*y] = a>>8<<24 | 0>>8<<16 | 0>>8<<8 | r/2>>8
+		bufferImage[rayX+renderWidth*3*y+1] = a>>8<<24 | 0>>8<<16 | g/2>>8<<8 | 0>>8
+		bufferImage[rayX+renderWidth*3*y+2] = a>>8<<24 | b/2>>8<<16 | 0>>8<<8 | 0>>8
 	}
 }
 
@@ -333,22 +345,39 @@ func drawSprite(bufferImage []uint32, textureImageImage image.Image, hitX float6
 		if isWall {
 
 			if isHitOnX {
-				bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+				//bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+				bufferImage[rayX+renderWidth*3*y] = a>>8<<24 | 0<<16 | 0>>8<<8 | r/3*2>>8
+				bufferImage[rayX+renderWidth*3*y+1] = a>>8<<24 | 0>>8<<16 | g/3*2>>8<<8 | 0>>8
+				bufferImage[rayX+renderWidth*3*y+2] = a>>8<<24 | b>>8<<16 | 0>>8<<8 | 0>>8
+
 			} else {
-				bufferImage[rayX+renderWidth*y] = a>>8<<24 | b/4*3>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+				//bufferImage[rayX+renderWidth*y] = a>>8<<24 | b/4*3>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+				bufferImage[rayX+renderWidth*3*y] = a>>8<<24 | 0>>8<<16 | 0>>8<<8 | r/3*2>>8
+				bufferImage[rayX+renderWidth*3*y+1] = a>>8<<24 | 0>>8<<16 | g/3*2>>8<<8 | 0>>8
+				bufferImage[rayX+renderWidth*3*y+2] = a>>8<<24 | b/4*3>>8<<16 | 0>>8<<8 | 0>>8
+
 			}
 
 		} else {
 			if a == 0xffff { // simple transparency
 				if isMirror {
 					if isHitOnX {
-						bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+						//bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+						bufferImage[rayX+renderWidth*3*y] = a>>8<<24 | 0>>8<<16 | 0>>8<<8 | r/3*2>>8
+						bufferImage[rayX+renderWidth*3*y+1] = a>>8<<24 | 0>>8<<16 | g/3*2>>8<<8 | 0>>8
+						bufferImage[rayX+renderWidth*3*y+2] = a>>8<<24 | b>>8<<16 | 0>>8<<8 | 0>>8
 					} else {
-						bufferImage[rayX+renderWidth*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+						//bufferImage[rayX+renderWidth*y] = a>>8<<24 | b/3*2>>8<<16 | g/3*2>>8<<8 | r/3*2>>8
+						bufferImage[rayX+renderWidth*3*y] = a>>8<<24 | 0>>8<<16 | 0>>8<<8 | r/3*2>>8
+						bufferImage[rayX+renderWidth*3*y+1] = a>>8<<24 | 0>>8<<16 | g/3*2>>8<<8 | 0>>8
+						bufferImage[rayX+renderWidth*3*y+2] = a>>8<<24 | b/3*2>>8<<16 | 0>>8<<8 | 0>>8
 					}
 				} else {
 					// 2D sprite
-					bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
+					//bufferImage[rayX+renderWidth*y] = a>>8<<24 | b>>8<<16 | g>>8<<8 | r>>8
+					bufferImage[rayX+renderWidth*3*y] = a>>8<<24 | 0>>8<<16 | 0>>8<<8 | r>>8
+					bufferImage[rayX+renderWidth*3*y+1] = a>>8<<24 | 0>>8<<16 | g>>8<<8 | 0>>8
+					bufferImage[rayX+renderWidth*3*y+2] = a>>8<<24 | b>>8<<16 | 0>>8<<8 | 0>>8
 				}
 			}
 		}
@@ -449,12 +478,17 @@ func main() {
 		angle: math.Pi / 2, // looking straight ahead
 	}
 
+	config := Config{
+		isPerspectiveCorrectionOn: false,
+		isCRTShaderOn:             false,
+	}
+
 	// Camera settings
 	fov := math.Pi / 2.0 // 90 degrees
 
 	raylib.SetTargetFPS(75)
-	pixelBuffer1 := make([]uint32, renderWidth*renderHeight)
-	pixelBuffer2 := make([]uint32, renderWidth*renderHeight)
+	pixelBuffer1 := make([]uint32, renderWidth*3*renderHeight) // RGB shared effect
+	pixelBuffer2 := make([]uint32, renderWidth*3*renderHeight)
 	currentPixelBuffer := &pixelBuffer1
 
 	// render
@@ -462,7 +496,7 @@ func main() {
 
 	img := raylib.Image{
 		Data:    dataPtr,
-		Width:   renderWidth,
+		Width:   renderWidth * 3,
 		Height:  renderHeight,
 		Mipmaps: 1,
 		Format:  raylib.UncompressedR8g8b8a8,
@@ -478,7 +512,7 @@ func main() {
 	textureRectangle := raylib.Rectangle{
 		X:      0,
 		Y:      0,
-		Width:  renderWidth,
+		Width:  renderWidth * 3,
 		Height: renderHeight,
 	}
 
@@ -514,7 +548,7 @@ func main() {
 	dataPtr = unsafe.Pointer(&(*currentPixelBuffer)[0])
 	img = raylib.Image{
 		Data:    dataPtr,
-		Width:   renderWidth,
+		Width:   renderWidth * 3,
 		Height:  renderHeight,
 		Mipmaps: 1,
 		Format:  raylib.UncompressedR8g8b8a8,
@@ -602,6 +636,14 @@ func main() {
 			raylib.ToggleFullscreen()
 		}
 
+		if raylib.IsKeyDown(raylib.KeyLeftAlt) && raylib.IsKeyDown(raylib.KeyP) {
+			if config.isPerspectiveCorrectionOn {
+				config.isPerspectiveCorrectionOn = false
+			} else {
+				config.isPerspectiveCorrectionOn = true
+			}
+		}
+
 		playerPadding := 0.35
 		directionXNorm := futurePlayerDeltaX
 		directionYNorm := futurePlayerDeltaY
@@ -683,10 +725,14 @@ func main() {
 					isHitOnX := zbufferItem.IsHitOnX
 					numberOfMirrorsInWay := zbufferItem.NumberOfMirrorsInWay
 					// Calculate the angle difference
-					angleDiff := rayAngleRad - player.angle
+					//angleDiff := rayAngleRad - player.angle
 
 					// Perspective correction
-					currentDistance := itemDist * math.Cos(angleDiff)
+					currentDistance := itemDist
+					if config.isPerspectiveCorrectionOn {
+						angleDiff := rayAngleRad - player.angle
+						currentDistance *= math.Cos(angleDiff)
+					}
 
 					// Texture coordinate
 					if itemId == 0 {
@@ -701,7 +747,7 @@ func main() {
 
 						if wallHeightHalfCurrent != wallHeightHalfLast {
 							lastDistance = currentDistance
-							drawFloorAndCeiling(*currentPixelBuffer, wallImageImage, hitX, hitY, wallHeightHalfLast, wallHeightHalfCurrent, ray, numberOfMirrorsInWay, currentDistance)
+							drawFloorAndCeiling(*currentPixelBuffer, wallImageImage, hitX, hitY, wallHeightHalfLast, wallHeightHalfCurrent, ray*3, numberOfMirrorsInWay, currentDistance)
 						}
 
 					} else if itemId >= 1 && itemId <= 2 {
@@ -729,7 +775,7 @@ func main() {
 							isWall = false
 						}
 
-						drawSprite(*currentPixelBuffer, imageOnWall, float64(texX), currentDistance, ray, isMirror, isWall, isHitOnX, numberOfMirrorsInWay)
+						drawSprite(*currentPixelBuffer, imageOnWall, float64(texX), currentDistance, ray*3, isMirror, isWall, isHitOnX, numberOfMirrorsInWay)
 
 					} else {
 						// sprites
@@ -748,7 +794,7 @@ func main() {
 
 						texX := 0.5 - float32(hitX) // map to textureSprite width
 
-						drawSprite(*currentPixelBuffer, textureImage, float64(texX), currentDistance, ray, false, false, false, numberOfMirrorsInWay)
+						drawSprite(*currentPixelBuffer, textureImage, float64(texX), currentDistance, ray*3, false, false, false, numberOfMirrorsInWay)
 					}
 				}
 			}(ray)

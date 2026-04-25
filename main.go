@@ -275,18 +275,6 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	ceilingEndY := renderHeightHalf - wallHeightHalfLast
 
 	for y := floorStartY; y < floorEndY; y++ {
-		/*if floorStartY < renderHeightHalf {
-			floorStartY = renderHeightHalf
-		}
-		if floorEndY < renderHeightHalf {
-			floorEndY = renderHeightHalf
-		}
-		if floorStartY > renderHeight {
-			floorStartY = renderHeight
-		}
-		if floorEndY > renderHeight {
-			floorEndY = renderHeight
-		}*/
 		if y <= renderHeightHalf {
 			continue // too far, error
 		}
@@ -297,18 +285,6 @@ func drawFloorAndCeiling(bufferImage []uint32, textureImageImage image.Image, hi
 	}
 
 	for y := ceilingStartY; y < ceilingEndY; y++ {
-		/*if ceilingStartY < 0 {
-			ceilingStartY = 0
-		}
-		if ceilingEndY < 0 {
-			ceilingEndY = 0
-		}
-		if ceilingStartY > renderHeightHalf {
-			ceilingStartY = renderHeightHalf
-		}
-		if ceilingEndY > renderHeightHalf {
-			ceilingEndY = renderHeightHalf
-		}*/
 		if y >= renderHeightHalf {
 			continue // too far, error
 		}
@@ -649,43 +625,36 @@ func main() {
 		*/
 		isCollisionXFree := true
 		isCollisionYFree := true
-		for {
-			countOfCollision := 0
-			for paddingY := -playerPadding; paddingY <= playerPadding; paddingY += 2 * playerPadding {
-				for paddingX := -playerPadding; paddingX <= playerPadding; paddingX += 2 * playerPadding {
-					mapX := int(futurePlayerAbsX + paddingX)
-					mapY := int(player.y + paddingY)
 
-					mapTileIndex := mapData[mapY][mapX]
-					if mapTileIndex != 0 {
-						isCollisionXFree = false
-						countOfCollision += 1
-					}
+		countOfCollision := 0
+		for paddingY := -playerPadding; paddingY <= playerPadding; paddingY += 2 * playerPadding {
+			for paddingX := -playerPadding; paddingX <= playerPadding; paddingX += 2 * playerPadding {
+				mapX := int(futurePlayerAbsX + paddingX)
+				mapY := int(player.y + paddingY)
 
-					mapX = int(player.x + paddingX)
-					mapY = int(futurePlayerAbsY + paddingY)
-					mapTileIndex = mapData[mapY][mapX]
-					if mapTileIndex != 0 {
-						isCollisionYFree = false
-						countOfCollision += 1
-					}
-
+				mapTileIndex := mapData[mapY][mapX]
+				if mapTileIndex != 0 {
+					isCollisionXFree = false
+					countOfCollision += 1
 				}
+
+				mapX = int(player.x + paddingX)
+				mapY = int(futurePlayerAbsY + paddingY)
+				mapTileIndex = mapData[mapY][mapX]
+				if mapTileIndex != 0 {
+					isCollisionYFree = false
+					countOfCollision += 1
+				}
+
 			}
-			// if both false, jump around in order not to get stuck on the edge
-			if isCollisionXFree || isCollisionYFree {
-				break
-			} else if countOfCollision == 2 { // Edge only
-				// move player back and let him move only on one axis (Y)
-				println("Collision XY Free")
-				player.x -= futurePlayerDeltaX * factor
-				player.y -= futurePlayerDeltaY * factor
-				isCollisionYFree = true
-				break
-			} else {
-				// not on the edge, player is stuck correctly behind walls
-				break
-			}
+		}
+		// if both false, jump around in order not to get stuck on the edge
+		if countOfCollision == 2 && !isCollisionYFree && !isCollisionXFree { // Edge only
+			// move player back and let him move only on one axis (Y)
+			println("Collision XY Free")
+			player.x -= futurePlayerDeltaX * factor
+			player.y -= futurePlayerDeltaY * factor
+			isCollisionYFree = true
 		}
 
 		if isCollisionXFree {
